@@ -192,6 +192,7 @@ def main(args):
 
     if args.predict:  # Make predictions for the test partition; this option is set if there are no test labels
         print('Predicting devel and test samples...')
+        print(f'Predition path: {args.paths['predict']}')
         best_model = torch.load(model_file, map_location=config.device)
         evaluate(args.task, best_model, data_loader['devel'], loss_fn=loss_fn, eval_fn=eval_fn,
                  use_gpu=args.use_gpu, predict=True, prediction_path=args.paths['predict'],

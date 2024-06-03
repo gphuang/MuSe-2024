@@ -120,14 +120,12 @@ def evaluate(task, model, data_loader, loss_fn, eval_fn, use_gpu=False, predict=
 
             preds,_ = model(features, feature_lens)
 
-
             if predict:
                 full_metas.append(metas.tolist())
-
-            loss = loss_fn(preds.squeeze(-1), labels.squeeze(-1))
-
-            losses += loss.item() * batch_size
-            sizes += batch_size
+            else:
+                loss = loss_fn(preds.squeeze(-1), labels.squeeze(-1))
+                losses += loss.item() * batch_size
+                sizes += batch_size
 
             full_labels.append(labels.cpu().detach().squeeze().numpy().tolist())
             full_preds.append(preds.cpu().detach().squeeze().numpy().tolist())

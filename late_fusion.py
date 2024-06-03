@@ -108,8 +108,9 @@ if __name__ == '__main__':
         meta_df = dfs[0][meta_cols].copy()
 
         label_cols = [c for c in list(dfs[0].columns) if c.startswith('label')]
-        for label_col in label_cols:
-            assert all(np.all(df[label_col].values == dfs[0][label_col].values) for df in dfs)
+        if args.task == PERCEPTION:
+            for label_col in label_cols:
+                assert all(np.all(df[label_col].values == dfs[0][label_col].values) for df in dfs)
         label_df = dfs[0][label_cols].copy()
 
         prediction_dfs = []
@@ -121,16 +122,27 @@ if __name__ == '__main__':
 
         full_df = pd.concat([meta_df, prediction_df, label_df], axis='columns')
 
-        if args.task == 'humor':
+        if args.task == HUMOR:
             preds, labels, weights = create_humor_lf(full_df, weights=weights)
         elif args.task == PERCEPTION:
             preds, labels, weights = create_perception_lf(full_df, weights=weights)
 
         eval_fn, eval_str = get_eval_fn(args.task)
 
+        # replace NaN values with 0 from labels e.g. test. Othewise RaisedException from eval_fn
+        labels[np.isnan(labels)] = 0
         result = np.round(eval_fn(preds, labels), 4)
         print(f'{partition}: {result} {eval_str}')
         ress.append(result)
+
+        # save fusion predictions
+        full_df['prediction'] = preds
+        task_id = args.task if args.task != PERCEPTION else os.path.join(args.task, args.label_dim)
+        _filename = os.path.join(PREDICTION_FOLDER, task_id, 'lf', f'predictions_{partition}.csv')
+        os.makedirs(os.path.dirname(_filename), exist_ok=True)
+        full_df.to_csv(_filename, index=False)
+        print(f'Predictions saved to {_filename}')
+
     if not args.result_csv is None:
         df = pd.DataFrame({
             'models': [args.model_ids],
@@ -143,4 +155,4 @@ if __name__ == '__main__':
             old_df = pd.read_csv(args.result_csv)
             df = pd.concat([old_df, df], axis='rows').reset_index(drop=True)
         df.to_csv(args.result_csv, index=False)
-        print(f'Saved to {args.result_csv}')
+        print(f'Fusion results saved to {args.result_csv}')

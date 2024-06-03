@@ -5,10 +5,11 @@ import datetime
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# adjust your paths here.
-BASE_PATH = "/home/lukas/Desktop/nas/data_work/LukasChrist/MuSe2024/"
-PERCEPTION_PATH = os.path.join(BASE_PATH, 'packages', 'c1_muse_perception')
-HUMOR_PATH = os.path.join(BASE_PATH, 'packages', 'c2_muse_humor')
+# muse 2024 data
+DATA_PATH = "/scratch/elec/puhe/c/muse_2024" 
+PERCEPTION_PATH = os.path.join(DATA_PATH, 'c1_muse_perception')
+HUMOR_PATH = os.path.join(DATA_PATH, 'c2_muse_humor')
+BASE_PATH = "/scratch/work/huangg5/muse/MuSe-2024"  # "/home/lukas/Desktop/nas/data_work/LukasChrist/MuSe2024/"
 
 PERCEPTION = 'perception'
 HUMOR = 'humor'

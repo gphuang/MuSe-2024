@@ -1,4 +1,15 @@
-#!/usr/bin/env bash
+#!/bin/bash
+#SBATCH --time=23:59:59
+#SBATCH --mem=250G
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=6
+#SBATCH --output=logs/%A.out
+#SBATCH --job-name=muse
+#SBATCH -n 1
+
+module load mamba
+
+source activate muse
 
 labels=('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured')
 features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps --normalize' 'ds')
@@ -15,6 +26,7 @@ dropouts=(0.4)
 
 # adapt
 csv='../csvs/perception_baseline.csv'
+csv='results/csvs/humor_baseline.csv'
 
 for feature in "${features[@]}"; do
     # RNN
