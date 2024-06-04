@@ -25,8 +25,7 @@ n_seeds=5
 dropouts=(0.4)
 
 # adapt
-csv='../csvs/perception_baseline.csv'
-csv='results/csvs/humor_baseline.csv'
+csv='results/csvs/perception_baseline.csv'
 
 for feature in "${features[@]}"; do
     # RNN
