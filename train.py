@@ -26,7 +26,10 @@ def train(model, train_loader, optimizer, loss_fn, use_gpu=False):
 
         optimizer.zero_grad()
 
-        preds,_ = model(features, feature_lens)
+        preds,_ = model(features, feature_lens) 
+        """print(features.shape, feature_lens.shape, preds.shape)
+        import sys
+        sys.exit(0)"""
 
         loss = loss_fn(preds.squeeze(-1), labels.squeeze(-1))
 

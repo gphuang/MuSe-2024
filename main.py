@@ -208,8 +208,16 @@ if __name__ == '__main__':
     print("Start",flush=True)
     args = parse_args()
 
-    args.log_file_name =  '{}_{}_[{}]_[{}_{}_{}_{}]_[{}_{}]'.format('RNN', datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M"), args.feature.replace(os.path.sep, "-"),
-                                                 args.model_dim, args.rnn_n_layers, args.rnn_bi, args.d_fc_out, args.lr,args.batch_size)
+    # -%H-%M
+    args.log_file_name =  '{}_{}_[{}]_[{}_{}_{}_{}]_[{}_{}]'.format('CNN', 
+                                                                    datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d"), 
+                                                                    args.feature.replace(os.path.sep, "-"),
+                                                                    args.model_dim, 
+                                                                    args.rnn_n_layers, 
+                                                                    args.rnn_bi, 
+                                                                    args.d_fc_out, 
+                                                                    args.lr,
+                                                                    args.batch_size)
 
     # adjust your paths in config.py
     task_id = args.task if args.task != PERCEPTION else os.path.join(args.task, args.label_dim)

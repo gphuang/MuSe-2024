@@ -5,6 +5,48 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 import torch.nn.functional as F
 from config import ACTIVATION_FUNCTIONS, device
 
+def conv1d_block_audio(in_channels, out_channels, kernel_size=3, stride=1, padding='same'):
+    return nn.Sequential(nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size,stride=stride, padding='valid'),nn.BatchNorm1d(out_channels),
+                                   nn.ReLU(inplace=True), nn.MaxPool1d(2,1))
+
+class Model(nn.Module):
+    """
+    source: https://github.com/gphuang/multimodal-emotion-recognition-ravdess/tree/main
+    """
+
+    def __init__(self, params):
+        super(Model, self).__init__()
+
+        self.params = params
+        input_channels=params.d_in
+        num_classes=params.n_targets
+
+        self.conv1d_0 = conv1d_block_audio(input_channels, 64)
+        self.conv1d_1 = conv1d_block_audio(64, 128)
+        self.conv1d_2 = conv1d_block_audio(128, 256)
+        self.conv1d_3 = conv1d_block_audio(256, 128)
+
+        self.classifier_1 = nn.Sequential(nn.Linear(128, num_classes),)
+        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
+            
+    def forward(self, x, x_len):
+        """Input (av feats): (batch_size, seq_len, feat_size)"""
+
+        """print(x.shape)
+        print(self.params)
+        import sys
+        sys.exit(0)"""
+
+        # Conv 
+        x = x.transpose(1, 2)     # (batch_size x feat_size x seq_len) torch.Size([59, 512, 81])
+        x = self.conv1d_0(x)
+        x = self.conv1d_1(x) # torch.Size([59, 128, 75])
+        x = self.conv1d_2(x)
+        x = self.conv1d_3(x) # torch.Size([59, 128, 69])
+        x = x.mean([-1]) # torch.Size([59, 128]) pooling accross temporal dimension
+        x = self.classifier_1(x) # torch.Size([59, 1])
+        activation = self.final_activation(x) #   torch.Size([59, 1])
+        return activation, x
 
 class RNN(nn.Module):
     def __init__(self, d_in, d_out, n_layers=1, bi=True, dropout=0.2, n_to_1=False):
@@ -52,10 +94,9 @@ class OutLayer(nn.Module):
         y = self.fc_2(self.fc_1(x))
         return y
 
-
-class Model(nn.Module):
+class RNNModel(nn.Module):
     def __init__(self, params):
-        super(Model, self).__init__()
+        super(RNNModel, self).__init__()
         self.params = params
 
         self.inp = nn.Linear(params.d_in, params.model_dim, bias=False)
@@ -63,16 +104,19 @@ class Model(nn.Module):
         self.encoder = RNN(params.model_dim, params.model_dim, n_layers=params.rnn_n_layers, bi=params.rnn_bi,
                            dropout=params.rnn_dropout, n_to_1=params.n_to_1)
 
-
         d_rnn_out = params.model_dim * 2 if params.rnn_bi and params.rnn_n_layers > 0 else params.model_dim
         self.out = OutLayer(d_rnn_out, params.d_fc_out, params.n_targets, dropout=params.linear_dropout)
         self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
 
     def forward(self, x, x_len):
-        x = self.inp(x)
-        x = self.encoder(x, x_len)
-        y = self.out(x)
-        activation = self.final_activation(y)
+        """
+        x: torch.Size([bs, t_step, feat_dim]), e.g. feat_dim=20 faus
+        x_len: torch.Size([bs])
+        """
+        x = self.inp(x) # torch.Size([59, 81, 256])
+        x = self.encoder(x, x_len) # torch.Size([59, 256])
+        x = self.out(x) # torch.Size([59, 1])
+        activation = self.final_activation(x) # torch.Size([59, 1])
         return activation, x
 
     def set_n_to_1(self, n_to_1):
