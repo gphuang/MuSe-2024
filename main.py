@@ -209,7 +209,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     # -%H-%M
-    args.log_file_name =  '{}_{}_[{}]_[{}_{}_{}_{}]_[{}_{}]'.format('CNN', 
+    args.log_file_name =  '{}_{}_[{}]_[{}_{}_{}_{}]_[{}_{}]'.format('CRNN', 
                                                                     datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d"), 
                                                                     args.feature.replace(os.path.sep, "-"),
                                                                     args.model_dim, 
