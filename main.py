@@ -31,6 +31,8 @@ def parse_args():
     parser.add_argument('--label_dim', default="assertiv", choices=config.PERCEPTION_LABELS)
     parser.add_argument('--normalize', action='store_true',
                         help='Specify whether to normalize features (default: False).')
+    parser.add_argument('--self_attn', action='store_true',
+                        help='Specify whether to use self attention (default: False).')
     parser.add_argument('--model_dim', type=int, default=64,
                         help='Specify the number of hidden states in the RNN (default: 64).')
     parser.add_argument('--rnn_n_layers', type=int, default=1,
@@ -128,7 +130,9 @@ def main(args):
                                                                      num_workers=4,
                                                                      worker_init_fn=seed_worker,
                                                                      collate_fn=custom_collate_fn)
-            
+            if args.self_attn:
+                print('Use self attention.')
+                from model import AttnModel as Model
             model = Model(args)
 
 
@@ -209,8 +213,8 @@ if __name__ == '__main__':
     args = parse_args()
 
     # -%H-%M
-    args.log_file_name =  '{}_{}_[{}]_[{}_{}_{}_{}]_[{}_{}]'.format('CRNN', 
-                                                                    datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d"), 
+    args.log_file_name =  '{}_{}_[{}]_[{}_{}_{}_{}]_[{}_{}]'.format('CNN_Attn', 
+                                                                    datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M"), 
                                                                     args.feature.replace(os.path.sep, "-"),
                                                                     args.model_dim, 
                                                                     args.rnn_n_layers, 

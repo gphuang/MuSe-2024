@@ -34,7 +34,7 @@ for feature in "${features[@]}"; do
             for lr in "${lrs[@]}";do
                 for dropout in "${dropouts[@]}";do
                     for label in "${labels[@]}"; do
-                        python3 main.py --task perception --use_gpu --feature $feature --model_dim $model_dim --label_dim "$label" --rnn_n_layers $num_rnn_layers --lr "$lr" --n_seeds "$n_seeds" --result_csv "$csv" --linear_dropout $dropout --rnn_dropout $dropout --early_stopping_patience 10
+                        python3 main.py --task perception --use_gpu --feature $feature --model_dim $model_dim --label_dim "$label" --self_attn --rnn_bi --rnn_n_layers $num_rnn_layers --lr "$lr" --n_seeds "$n_seeds" --result_csv "$csv" --linear_dropout $dropout --rnn_dropout $dropout --early_stopping_patience 10
                     done
                     done
                 done

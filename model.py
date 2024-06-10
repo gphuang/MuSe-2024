@@ -5,6 +5,40 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 import torch.nn.functional as F
 from config import ACTIVATION_FUNCTIONS, device
 
+class Attention(nn.Module):
+    def __init__(self, in_dim_k, in_dim_q, out_dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0.):
+        super().__init__()
+        self.num_heads = num_heads
+        head_dim = out_dim // num_heads
+        self.scale = qk_scale or head_dim ** -0.5
+
+        self.q = nn.Linear(in_dim_q, out_dim, bias=qkv_bias)
+        self.kv = nn.Linear(in_dim_k, out_dim * 2, bias=qkv_bias)
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.proj = nn.Linear(out_dim, out_dim)
+        self.proj_drop = nn.Dropout(proj_drop)
+        self.qkmatrix = None
+
+    def forward(self, x, x_q):
+        B, Nk, Ck = x.shape
+        B, Nq, Cq = x_q.shape
+        q = self.q(x_q).reshape(B, Nq, 1, self.num_heads, -1).permute(2, 0, 3, 1, 4)
+        kv = self.kv(x).reshape(B, Nk, 2, self.num_heads, -1).permute(2, 0, 3, 1, 4)
+        k, v = kv[0], kv[1]   # make torchscript happy (cannot use tensor as tuple)
+        q = q.squeeze(0)
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+       
+        attn = attn.softmax(dim=-1)
+        
+        self.qkmatrix = attn
+        attn = self.attn_drop(attn)
+
+        x = (attn @ v).transpose(1, 2).reshape(B, Nq, -1)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x, self.qkmatrix
+
 def conv1d_block_audio(in_channels, out_channels, kernel_size=3, stride=1, padding='same'):
     return nn.Sequential(nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size,stride=stride, padding='valid'),nn.BatchNorm1d(out_channels),
                                    nn.ReLU(inplace=True), nn.MaxPool1d(2,1))
@@ -19,7 +53,6 @@ class Model(nn.Module):
 
         self.params = params
         input_channels=params.d_in # feat_size
-        num_classes=params.n_targets
 
         self.conv1d_0 = conv1d_block_audio(input_channels, 64)
         self.conv1d_1 = conv1d_block_audio(64, 128)
@@ -56,6 +89,92 @@ class Model(nn.Module):
         x = x.mean([-1]) # pooling accross temporal dimension ([59, 256])
         x = self.out(x) # torch.Size([batch_size, 1]) ([59, 1])
         activation = self.final_activation(x) # torch.Size([batch_size, 1]) ([59, 1])
+        return activation, x
+
+class AttnCnnModelSimplified(nn.Module):
+    """
+    source: https://github.com/gphuang/multimodal-emotion-recognition-ravdess/tree/main/models/multimodalcnn.py
+    """
+
+    def __init__(self, params):
+        super(AttnCnnModelSimplified, self).__init__()
+
+        self.params = params
+        input_channels=params.d_in 
+        num_classes=params.n_targets
+
+        self.attention = Attention(in_dim_k=input_channels, in_dim_q=input_channels, out_dim=256)
+        self.conv1d = conv1d_block_audio(256, 128)
+        self.classifier_1 = nn.Sequential(nn.Linear(128, num_classes),)
+        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
+            
+    def forward(self, x, x_len):
+        """Input (av feats): (batch_size, seq_len, input_channels)"""
+
+        x = x.transpose(1, 2) # (batch_size, input_channels, seq_len) 
+
+        # Attn
+        proj_x = x.permute(0,2,1) # (batch_size, seq_len, input_channels)
+        x, _ = self.attention(proj_x, proj_x) # (batch_size, input_channels, attn_out_dim)
+
+        # Conv
+        x = x.permute(0,2,1)
+        x = self.conv1d(x) # (batch_size, conv_dim, conv_seq_len*)
+
+        # Classifier
+        x = x.mean([-1]) # torch.Size([batch_size, conv_dim]) pooling accross temporal dimension
+        x = self.classifier_1(x) # torch.Size([batch_size, 1])
+
+        activation = self.final_activation(x) #   torch.Size([batch_size, 1])
+        return activation, x
+
+class AttnModel(nn.Module):
+    """
+    source: https://github.com/gphuang/multimodal-emotion-recognition-ravdess/tree/main/models/multimodalcnn.py
+    """
+
+    def __init__(self, params):
+        super(AttnModel, self).__init__()
+
+        self.params = params
+        input_channels=params.d_in 
+        num_classes=params.n_targets
+        num_heads=1 # params.n_heads
+
+        self.conv1d_0 = conv1d_block_audio(input_channels, 64)
+        self.conv1d_1 = conv1d_block_audio(64, 128)
+        self.conv1d_2 = conv1d_block_audio(128, 256)
+        self.conv1d_3 = conv1d_block_audio(256, 128)
+        
+        self.attention = Attention(in_dim_k=128, in_dim_q=128, out_dim=128)
+
+        self.classifier_1 = nn.Sequential(nn.Linear(128, num_classes),)
+        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
+            
+    def forward(self, x, x_len):
+        """Input (av feats): (batch_size, seq_len, input_channels)"""
+
+        # Conv 
+        x = x.transpose(1, 2) # (batch_size, input_channels, seq_len)  
+        x = self.conv1d_0(x)
+        x = self.conv1d_1(x) # (batch_size, conv_dim, conv_seq_len')
+
+        # Attn
+        proj_x = x.permute(0,2,1) # (batch_size, conv_seq_len', conv_dim)
+        _, h_matrix = self.attention(proj_x, proj_x) # (batch_size, attn_heads, attn_seq_len, attn_seq_len)
+        if h_matrix.size(1) > 1: #if more than 1 head, take average
+            h_matrix = torch.mean(h_matrix, axis=1).unsqueeze(1)
+        h_matrix = h_matrix.sum([-2]) # (batch_size, 1, attn_seq_len)
+        x = h_matrix*x # (batch_size, conv_dim, attn_seq_len)
+    
+        # Conv
+        x = self.conv1d_2(x)
+        x = self.conv1d_3(x) # (batch_size, conv_dim, conv_seq_len*)
+
+        # Classifier
+        x = x.mean([-1]) # torch.Size([batch_size, conv_dim]) pooling accross temporal dimension
+        x = self.classifier_1(x) # torch.Size([batch_size, 1])
+        activation = self.final_activation(x) #   torch.Size([batch_size, 1])
         return activation, x
 
 class CNNModel(nn.Module):
