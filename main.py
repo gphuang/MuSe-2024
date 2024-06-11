@@ -18,8 +18,6 @@ from model import Model
 from train import train_model
 from utils import Logger, seed_worker, log_results
 
-
-
 def parse_args():
 
     parser = argparse.ArgumentParser(description='MuSe 2024.')
@@ -31,8 +29,8 @@ def parse_args():
     parser.add_argument('--label_dim', default="assertiv", choices=config.PERCEPTION_LABELS)
     parser.add_argument('--normalize', action='store_true',
                         help='Specify whether to normalize features (default: False).')
-    parser.add_argument('--self_attn', action='store_true',
-                        help='Specify whether to use self attention (default: False).')
+    parser.add_argument('--model_type', default='rnn',
+                        help='Specify type of model to use, (default: RNN).')
     parser.add_argument('--model_dim', type=int, default=64,
                         help='Specify the number of hidden states in the RNN (default: 64).')
     parser.add_argument('--rnn_n_layers', type=int, default=1,
@@ -130,11 +128,23 @@ def main(args):
                                                                      num_workers=4,
                                                                      worker_init_fn=seed_worker,
                                                                      collate_fn=custom_collate_fn)
-            if args.self_attn:
-                print('Use self attention.')
-                from model import AttnModel as Model
+            if args.model_type.lower() == 'cnn':
+                print('Use cnn.')
+                from model import CnnModel  
+                model = CnnModel(args)
+            if args.model_type.lower() == 'crnn':
+                print('Use crnn.')
+                from model import CrnnModel
+                model = CrnnModel(args)
+            if args.model_type.lower() == 'cnn-attn':
+                print('Use self attention (with cnn).')
+                from model import CnnAttnModel 
+                model = CnnAttnModel(args)
+            if args.model_type.lower() == 'crnn-attn':
+                print('Use self attention (with crnn).')
+                from model import CrnnAttnModel 
+                model = CrnnAttnModel(args)
             model = Model(args)
-
 
             print('=' * 50)
             print(f'Training model... [seed {seed}] for at most {args.epochs} epochs')
@@ -212,8 +222,7 @@ if __name__ == '__main__':
     print("Start",flush=True)
     args = parse_args()
 
-    # -%H-%M
-    args.log_file_name =  '{}_{}_[{}]_[{}_{}_{}_{}]_[{}_{}]'.format('CNN_Attn', 
+    args.log_file_name =  '{}_{}_[{}]_[{}_{}_{}_{}]_[{}_{}]'.format(args.model_type.upper(), 
                                                                     datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M"), 
                                                                     args.feature.replace(os.path.sep, "-"),
                                                                     args.model_dim, 
