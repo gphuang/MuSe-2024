@@ -11,7 +11,7 @@ module load mamba
 
 source activate muse
 
-model_types=('cnn', 'rnn', 'crnn', 'cnn-attn', 'crnn-attn')
+model_types=('cnn' 'rnn' 'crnn' 'cnn-attn' 'crnn-attn')
 labels=('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured')
 features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps --normalize' 'ds')
 
