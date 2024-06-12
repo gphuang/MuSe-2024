@@ -43,7 +43,7 @@ def log_results(csv_path, params, val_results, test_results, seeds, best_idx, mo
     dct = {k:[v] for k,v in vars(params).items() if not k in exclude_keys}
     #dct.update({'model_file':model_files[best_idx]})
     dct.update({'best_seed':seeds[best_idx]})
-
+    dct.update({f'val_{metric_name}': val_results[:]})
     dct.update({f'best_val_{metric_name}': val_results[best_idx]})
     dct.update({f'mean_val_{metric_name}': np.mean(np.array(val_results))})
     dct.update({f'std_val_{metric_name}': np.std(np.array(val_results))})
