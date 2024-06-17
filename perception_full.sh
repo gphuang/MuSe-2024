@@ -27,7 +27,7 @@ n_seeds=5
 dropouts=(0.4)
 
 # adapt
-csv='results/csvs/perception.csv'
+csv='results/csvs/perception_crnn_attn.csv'
 
 for model_type in "${model_types[@]}"; do
     for feature in "${features[@]}"; do

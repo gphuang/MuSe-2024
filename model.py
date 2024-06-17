@@ -189,6 +189,101 @@ class AttnCnnModel(nn.Module):
         activation = self.final_activation(x) #   torch.Size([batch_size, 1])
         return activation, x
 
+class CrnnModel(nn.Module):
+    """
+    source: https://github.com/gphuang/multimodal-emotion-recognition-ravdess/tree/main
+    """
+
+    def __init__(self, params):
+        super(CrnnModel, self).__init__()
+
+        self.params = params
+        input_channels=params.d_in # feat_size
+
+        self.conv1d_0 = conv1d_block(input_channels, 64)
+        self.conv1d_1 = conv1d_block(64, 128)
+        self.conv1d_2 = conv1d_block(128, 256)
+        self.conv1d_3 = conv1d_block(256, 128)
+
+        self.inp = nn.Linear(128, params.model_dim, bias=False)
+
+        self.gru = nn.GRU(input_size=params.model_dim, 
+                          hidden_size=params.model_dim, 
+                          bidirectional=params.rnn_bi, 
+                          num_layers=params.rnn_n_layers, 
+                          dropout=params.rnn_dropout)
+
+        d_rnn_out = params.model_dim * 2 if params.rnn_bi and params.rnn_n_layers > 0 else params.model_dim
+        self.out = OutLayer(d_rnn_out, params.d_fc_out, params.n_targets, dropout=params.linear_dropout)
+        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
+            
+    def forward(self, x, x_len):
+        """Input (av feats): (batch_size, seq_len, input_channels)"""
+
+        # Conv 
+        x = x.transpose(1, 2) # (batch_size, input_channels, seq_len)   ([59, 88, 80])
+        x = self.conv1d_0(x)
+        x = self.conv1d_1(x) # torch.Size([batch_size, conv_dim, conv_seq_len']) ([59, 128, 74])
+        x = self.conv1d_2(x)
+        x = self.conv1d_3(x) # (batch_size, conv_dim, conv_seq_len*)  ([59, 128, 68])
+
+        # GRU
+        x = x.transpose(1, 2) # (batch_size, conv_seq_len*, conv_dim) ([59, 68, 128])
+        x = self.inp(x) # (batch_size, conv_seq_len*, rnn_dim) ([59, 68, 256])
+        x, _hidden_states = self.gru(x) # (batch_size, conv_seq_len*, rnn_dim) ([59, 68, 256])
+        x = x.transpose(1, 2)
+        x = x.mean([-1]) # pooling accross temporal dimension ([59, 256])
+        x = self.out(x) # torch.Size([batch_size, 1]) ([59, 1])
+        activation = self.final_activation(x) # torch.Size([batch_size, 1]) ([59, 1])
+        return activation, x
+
+class CnnAttnModel(nn.Module):
+    """
+    source: https://github.com/gphuang/multimodal-emotion-recognition-ravdess/tree/main/models/multimodalcnn.py
+    """
+
+    def __init__(self, params):
+        super(CnnAttnModel, self).__init__()
+
+        self.params = params
+        input_channels=params.d_in 
+        num_classes=params.n_targets
+
+        self.conv1d_0 = conv1d_block(input_channels, 64)
+        self.conv1d_1 = conv1d_block(64, 128)
+        self.conv1d_2 = conv1d_block(128, 256)
+        self.conv1d_3 = conv1d_block(256, 128)
+        
+        self.attention = Attention(in_dim_k=128, in_dim_q=128, out_dim=128)
+        self.out = OutLayer(128, params.d_fc_out, params.n_targets, dropout=params.linear_dropout)        
+        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
+            
+    def forward(self, x, x_len):
+        """Input (av feats): (batch_size, seq_len, input_channels)"""
+
+        # Conv 
+        x = x.transpose(1, 2) # (batch_size, input_channels, seq_len)  
+        x = self.conv1d_0(x)
+        x = self.conv1d_1(x) # (batch_size, conv_dim, conv_seq_len')
+
+        # Attn
+        proj_x = x.permute(0,2,1) # (batch_size, conv_seq_len', conv_dim)
+        _, h_matrix = self.attention(proj_x, proj_x) # (batch_size, attn_heads, attn_seq_len, attn_seq_len)
+        if h_matrix.size(1) > 1: #if more than 1 head, take average
+            h_matrix = torch.mean(h_matrix, axis=1).unsqueeze(1)
+        h_matrix = h_matrix.sum([-2]) # (batch_size, 1, attn_seq_len)
+        x = h_matrix*x # (batch_size, conv_dim, attn_seq_len)
+    
+        # Conv
+        x = self.conv1d_2(x)
+        x = self.conv1d_3(x) # (batch_size, conv_dim, conv_seq_len*)
+
+        # Classifier
+        x = x.mean([-1]) # torch.Size([batch_size, conv_dim]) pooling accross temporal dimension
+        x = self.out(x) # torch.Size([batch_size, 1])
+        activation = self.final_activation(x) #   torch.Size([batch_size, 1])
+        return activation, x
+
 class CrnnAttnModel(nn.Module):
     """
     source: https://github.com/gphuang/multimodal-emotion-recognition-ravdess/tree/main/models/multimodalcnn.py
@@ -247,99 +342,4 @@ class CrnnAttnModel(nn.Module):
         x = x.mean([-1]) # pooling accross temporal dimension  
         x = self.out(x) # torch.Size([batch_size, 1])  
         activation = self.final_activation(x) # torch.Size([batch_size, 1]) 
-        return activation, x
-
-class CnnAttnModel(nn.Module):
-    """
-    source: https://github.com/gphuang/multimodal-emotion-recognition-ravdess/tree/main/models/multimodalcnn.py
-    """
-
-    def __init__(self, params):
-        super(CnnAttnModel, self).__init__()
-
-        self.params = params
-        input_channels=params.d_in 
-        num_classes=params.n_targets
-
-        self.conv1d_0 = conv1d_block(input_channels, 64)
-        self.conv1d_1 = conv1d_block(64, 128)
-        self.conv1d_2 = conv1d_block(128, 256)
-        self.conv1d_3 = conv1d_block(256, 128)
-        
-        self.attention = Attention(in_dim_k=128, in_dim_q=128, out_dim=128)
-        self.out = OutLayer(128, params.d_fc_out, params.n_targets, dropout=params.linear_dropout)        
-        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
-            
-    def forward(self, x, x_len):
-        """Input (av feats): (batch_size, seq_len, input_channels)"""
-
-        # Conv 
-        x = x.transpose(1, 2) # (batch_size, input_channels, seq_len)  
-        x = self.conv1d_0(x)
-        x = self.conv1d_1(x) # (batch_size, conv_dim, conv_seq_len')
-
-        # Attn
-        proj_x = x.permute(0,2,1) # (batch_size, conv_seq_len', conv_dim)
-        _, h_matrix = self.attention(proj_x, proj_x) # (batch_size, attn_heads, attn_seq_len, attn_seq_len)
-        if h_matrix.size(1) > 1: #if more than 1 head, take average
-            h_matrix = torch.mean(h_matrix, axis=1).unsqueeze(1)
-        h_matrix = h_matrix.sum([-2]) # (batch_size, 1, attn_seq_len)
-        x = h_matrix*x # (batch_size, conv_dim, attn_seq_len)
-    
-        # Conv
-        x = self.conv1d_2(x)
-        x = self.conv1d_3(x) # (batch_size, conv_dim, conv_seq_len*)
-
-        # Classifier
-        x = x.mean([-1]) # torch.Size([batch_size, conv_dim]) pooling accross temporal dimension
-        x = self.out(x) # torch.Size([batch_size, 1])
-        activation = self.final_activation(x) #   torch.Size([batch_size, 1])
-        return activation, x
-
-class CrnnModel(nn.Module):
-    """
-    source: https://github.com/gphuang/multimodal-emotion-recognition-ravdess/tree/main
-    """
-
-    def __init__(self, params):
-        super(CrnnModel, self).__init__()
-
-        self.params = params
-        input_channels=params.d_in # feat_size
-
-        self.conv1d_0 = conv1d_block(input_channels, 64)
-        self.conv1d_1 = conv1d_block(64, 128)
-        self.conv1d_2 = conv1d_block(128, 256)
-        self.conv1d_3 = conv1d_block(256, 128)
-
-        self.inp = nn.Linear(128, params.model_dim, bias=False)
-
-        self.gru = nn.GRU(input_size=params.model_dim, 
-                          hidden_size=params.model_dim, 
-                          bidirectional=params.rnn_bi, 
-                          num_layers=params.rnn_n_layers, 
-                          dropout=params.rnn_dropout)
-
-        d_rnn_out = params.model_dim * 2 if params.rnn_bi and params.rnn_n_layers > 0 else params.model_dim
-        self.out = OutLayer(d_rnn_out, params.d_fc_out, params.n_targets, dropout=params.linear_dropout)
-        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
-            
-    def forward(self, x, x_len):
-        """Input (av feats): (batch_size, seq_len, input_channels)"""
-
-        # Conv 
-        x = x.transpose(1, 2) # (batch_size, input_channels, seq_len)   ([59, 88, 80])
-        x = self.conv1d_0(x)
-        x = self.conv1d_1(x) # torch.Size([batch_size, conv_dim, conv_seq_len']) ([59, 128, 74])
-        x = self.conv1d_2(x)
-        x = self.conv1d_3(x) # (batch_size, conv_dim, conv_seq_len*)  ([59, 128, 68])
-
-        # GRU
-        x = x.transpose(1, 2) # (batch_size, conv_seq_len*, conv_dim) ([59, 68, 128])
-        x = self.inp(x) # (batch_size, conv_seq_len*, rnn_dim) ([59, 68, 256])
-        x, _hidden_states = self.gru(x) # (batch_size, conv_seq_len*, rnn_dim) ([59, 68, 256])
-        x = x.transpose(1, 2)
-        x = x.mean([-1]) # pooling accross temporal dimension ([59, 256])
-        x = self.out(x) # torch.Size([batch_size, 1]) ([59, 1])
-        activation = self.final_activation(x) # torch.Size([batch_size, 1]) ([59, 1])
         return activation, x
