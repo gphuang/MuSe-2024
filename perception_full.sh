@@ -11,12 +11,12 @@ module load mamba
 
 source activate muse
 
-model_types=('rnn') # ('cnn' 'rnn' 'crnn' 'cnn-attn' 'crnn-attn')
+model_types=('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') 
 labels=('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured')
+features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps --normalize' 'ds')
+features=('hubert-superb' 'hubert-er')
 features=('bert-base-uncased' 'bert-base-multilingual-cased' 'roberta-base' 'xlm-roberta-large' 'gpt2')
-# ('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
-# ('hubert-superb' 'hubert-er')
-# ('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps --normalize' 'ds')
+features=('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
 
 # RNN
 nums_rnn_layers=(2)

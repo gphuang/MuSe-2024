@@ -18,9 +18,6 @@ if 0:
 checkpoint = 'gpt2'
 checkpoints = ['bert-base-uncased', 'bert-base-multilingual-cased', 'roberta-base', 'xlm-roberta-large', 'gpt2']
 
-# Initialize the feature extraction pipeline
-feature_extractor = pipeline("feature-extraction", framework="pt", model=checkpoint)
-
 # Define the text
 text = "Geeks for Geeks"
 
@@ -36,6 +33,7 @@ for checkpoint in checkpoints:
     df = pd.read_csv(inf_name)
     a = list(df['sentence']) 
     text = ' '.join(str(e) for e in a)
+    feature_extractor = pipeline("feature-extraction", framework="pt", model=checkpoint)
     feature = feature_extractor(text, return_tensors="pt")[0] # torch.Size([7, 768])
     out_dir = os.path.join(feat_dir, checkpoint) # save features
     out_fname = os.path.join(out_dir, str(spkr_id) + '.csv')
