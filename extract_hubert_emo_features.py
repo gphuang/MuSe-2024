@@ -118,14 +118,8 @@ for _file in onlyfiles:
     activations = torch.mean(last_hidden_state, 1)
 
     # save features (logits_emo4, h_states512, h_states1024) for each audio file hubert-superb-er
-    feat_dir = '/scratch/elec/puhe/c/muse_2024/c1_muse_perception/feature_segments'
-    """out_dir = os.path.join(feat_dir, 'hubert-er')
-    out_fname = os.path.join(out_dir, str(spkr_id) + '.csv')
-    pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True) 
-    t_np = logits.detach().numpy()  
-    df = pd.DataFrame(t_np) 
-    df.to_csv(out_fname, index=False)"""  
-
+    feat_dir = '/scratch/elec/puhe/c/muse_2024/c1_muse_perception/feature_segments' 
+    
     out_dir = os.path.join(feat_dir, 'hubert-superb')
     out_fname = os.path.join(out_dir, str(spkr_id) + '.csv')
     pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True) 
