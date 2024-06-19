@@ -17,7 +17,6 @@ def train(model, train_loader, optimizer, loss_fn, use_gpu=False):
 
     for batch, batch_data in enumerate(train_loader, 1):
         features, feature_lens, labels, metas = batch_data
-        batch_size = features.size(0)
 
         if use_gpu:
             features = features.cuda()
@@ -27,9 +26,6 @@ def train(model, train_loader, optimizer, loss_fn, use_gpu=False):
         optimizer.zero_grad()
 
         preds,_ = model(features, feature_lens) 
-        """print(features.shape, feature_lens.shape, preds.shape)
-        import sys
-        sys.exit(0)"""
 
         loss = loss_fn(preds.squeeze(-1), labels.squeeze(-1))
 

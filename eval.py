@@ -110,7 +110,7 @@ def evaluate(task, model, data_loader, loss_fn, eval_fn, use_gpu=False, predict=
                     print('No labels available, no evaluation')
                     return np.nan, np.nan
 
-            batch_size = features.size(0)
+            batch_size = labels.size(0) # TBD: unimodal: features.size(0), multi-modal features is a tuple format
 
             if use_gpu:
                 model.cuda()

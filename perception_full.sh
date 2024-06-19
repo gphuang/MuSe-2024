@@ -14,9 +14,11 @@ source activate muse
 model_types=('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') 
 labels=('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured')
 features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps --normalize' 'ds')
-features=('hubert-superb' 'hubert-er')
-features=('bert-base-uncased' 'bert-base-multilingual-cased' 'roberta-base' 'xlm-roberta-large' 'gpt2')
-#features=('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
+audio_features=('w2v-msp' 'egemaps --normalize' 'ds' 'hubert-superb')
+video_features=('faus' 'facenet512' 'vit-fer')
+text_features=('bert-base-uncased' 'bert-base-multilingual-cased' 'roberta-base' 'xlm-roberta-large' 'gpt2')
+av_features=('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
+
 
 # RNN
 nums_rnn_layers=(2)
@@ -29,10 +31,10 @@ n_seeds=5
 dropouts=(0.4)
 
 # adapt
-csv='results/csvs/perception_crnn_attn.csv'
+csv='results/csvs/perception_avt.csv'
 
 for model_type in "${model_types[@]}"; do
-    for feature in "${features[@]}"; do
+    for feature in "${av_features[@]}"; do
         # RNN
         for num_rnn_layers in "${nums_rnn_layers[@]}"; do
             for model_dim in "${model_dims[@]}"; do
