@@ -16,7 +16,7 @@ labels=('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_lik
 features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps --normalize' 'ds')
 features=('hubert-superb' 'hubert-er')
 features=('bert-base-uncased' 'bert-base-multilingual-cased' 'roberta-base' 'xlm-roberta-large' 'gpt2')
-features=('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
+#features=('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
 
 # RNN
 nums_rnn_layers=(2)

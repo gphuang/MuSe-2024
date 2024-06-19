@@ -10,13 +10,13 @@ from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True}) # avoid xlabels to be cut off
 
 model_types=('rnn', ) 
-#model_types+=('cnn', 'crnn', 'cnn-attn', 'crnn-attn')
+model_types+=('cnn', 'crnn', 'cnn-attn', 'crnn-attn')
 features=('egemaps',) 
-features+=('ds', 'w2v-msp', 'faus', 'vit-fer', 'facenet512', 'hubert-superb', 'hubert-er', ) 
-#features+=('bert-base-uncased', 'bert-base-multilingual-cased', 'roberta-base', 'xlm-roberta-large', 'gpt2', )
+#features+=('ds', 'w2v-msp', 'faus', 'vit-fer', 'facenet512', 'hubert-superb', 'hubert-er', ) 
+features+=('bert-base-uncased', 'bert-base-multilingual-cased', 'roberta-base', 'xlm-roberta-large', 'gpt2', )
 #features+=('avhubert-base-lrs3-iter5', 'avhubert-large-lrs3-iter5', 'avhubert-base-vox-iter5', 'avhubert-large-vox-iter5', 'avhubert-base-noise-pt-noise-ft-30h', 'avhubert-large-noise-pt-noise-ft-30h') 
 label_dims=('aggressive',) 
-label_dims+=('arrogant', 'assertiv', 'confident', 'dominant', 'independent', 'risk', 'leader_like', 'collaborative', 'enthusiastic', 'friendly', 'good_natured', 'kind', 'likeable', 'sincere',  'warm') 
+#label_dims+=('arrogant', 'assertiv', 'confident', 'dominant', 'independent', 'risk', 'leader_like', 'collaborative', 'enthusiastic', 'friendly', 'good_natured', 'kind', 'likeable', 'sincere',  'warm') 
 
 csv_in='results/csvs/perception_crnn_attn.csv'
 csv_path='results/csvs/perception_analysis.csv'
@@ -35,6 +35,7 @@ if 1:
         for _feat in features:
             for _label in label_dims:
                 _df = df0[(df0.feature==_feat) & (df0.label_dim==_label) & (df0.model_type==_model)]
+                #TBD: 19June updated runs that produce duplicated or updated results in df.
                 #print(_model, _feat, _label, _df.shape)
                 _dict = ast.literal_eval(_df['paths'].values[0])
                 model_name = os.path.basename(_dict['model'])
