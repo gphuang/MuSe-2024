@@ -48,6 +48,40 @@ def conv1d_block(in_channels, out_channels, kernel_size=3, stride=1, padding='sa
     return nn.Sequential(nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size,stride=stride, padding='valid'),nn.BatchNorm1d(out_channels),
                                    nn.ReLU(inplace=True), nn.MaxPool1d(2,1))
 
+class SubNet(nn.Module):
+    '''
+    The LSTM-based subnetwork that is used in LMF to reduce 3-d tensor to 2-d
+    '''
+
+    def __init__(self, in_size, hidden_size, out_size, num_layers=1, dropout=0.2, bidirectional=False):
+        '''
+        Args:
+            in_size: input dimension
+            hidden_size: hidden layer dimension
+            num_layers: specify the number of layers of LSTMs. # output shape changes
+            dropout: dropout probability
+            bidirectional: specify usage of bidirectional LSTM. # output shape changes
+        Output:
+            (return value in forward) a tensor of shape (batch_size, out_size)
+        '''
+        super(SubNet, self).__init__()
+        self.rnn = nn.GRU(in_size, hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional, batch_first=True)
+        self.dropout = nn.Dropout(dropout)
+        self.linear_1 = nn.Linear(hidden_size, out_size)
+        self.bidirectional = bidirectional
+
+    def forward(self, x):
+        '''
+        Args:
+            x: tensor of shape (batch_size, sequence_len, in_size)
+        '''
+        _, final_states = self.rnn(x)
+        if self.bidirectional:
+            pass
+        h = self.dropout(final_states[0].squeeze())
+        y_1 = self.linear_1(h)
+        return y_1
+
 class RNN(nn.Module):
     def __init__(self, d_in, d_out, n_layers=1, bi=True, dropout=0.2, n_to_1=False):
         super(RNN, self).__init__()
@@ -349,43 +383,12 @@ class CrnnAttnModel(nn.Module):
         activation = self.final_activation(x) # torch.Size([batch_size, 1]) 
         return activation, x
 
-class SubNet(nn.Module):
-    '''
-    The LSTM-based subnetwork that is used in LMF to reduce 3-d tensor to 2-d
-    '''
-
-    def __init__(self, in_size, hidden_size, out_size, num_layers=1, dropout=0.2, bidirectional=False):
-        '''
-        Args:
-            in_size: input dimension
-            hidden_size: hidden layer dimension
-            num_layers: specify the number of layers of LSTMs.
-            dropout: dropout probability
-            bidirectional: specify usage of bidirectional LSTM
-        Output:
-            (return value in forward) a tensor of shape (batch_size, out_size)
-        '''
-        super(SubNet, self).__init__()
-        self.rnn = nn.LSTM(in_size, hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional, batch_first=True)
-        self.dropout = nn.Dropout(dropout)
-        self.linear_1 = nn.Linear(hidden_size, out_size)
-        self.bidirectional = bidirectional
-
-    def forward(self, x):
-        '''
-        Args:
-            x: tensor of shape (batch_size, sequence_len, in_size)
-        '''
-        _, final_states = self.rnn(x)
-        if self.bidirectional:
-            pass
-        h = self.dropout(final_states[0].squeeze())
-        y_1 = self.linear_1(h)
-        return y_1
-
 class LmfModel(nn.Module):
     """
     Zhun Liu, Ying Shen, Varun Bharadhwaj Lakshmi- narasimhan, et al., “Efficient low-rank multimodal fusion with modality-specific factors,” in ACL (1). 2018, pp. 2247–2256, ACL.
+    
+    https://github.com/Justin1904/Low-rank-Multimodal-Fusion/blob/master/model.py
+    https://github.com/zerohd4869/MM-DFN/blob/da970366069247e05de3b9298f1e1bbc5c77a187/code/model_fusion.py
     """
     def __init__(self, params):
         """
@@ -406,7 +409,7 @@ class LmfModel(nn.Module):
         hidden_dims=(300, 300, 300) # params.hidden_dims
         h2_dims=(300, 300, 300) # params.h2_dims
         output_dim=params.n_targets
-        dropouts=(0.1, 0.2, 0.5, 0.5) #params.fusion_dropouts
+        dropouts=(0.4, 0.4, 0.4, 0.4) #params.fusion_dropouts
         rank=4 # params.rank
         use_softmax=True
 
@@ -429,9 +432,9 @@ class LmfModel(nn.Module):
         self.post_fusion_prob = dropouts[3]
 
         # define the pre-fusion subnetworks
-        self.audio_subnet = nn.Linear(self.audio_in, self.audio_hidden)
-        self.video_subnet = nn.Linear(self.video_in, self.video_hidden)
-        self.text_subnet = nn.Linear(self.text_in, self.text_hidden)
+        #self.audio_subnet = nn.Linear(self.audio_in, self.audio_hidden)
+        #self.video_subnet = nn.Linear(self.video_in, self.video_hidden)
+        #self.text_subnet = nn.Linear(self.text_in, self.text_hidden)
         self.audio_subnet = SubNet(self.audio_in, self.audio_hidden, self.audio_out, dropout=self.audio_prob)
         self.video_subnet = SubNet(self.video_in, self.video_hidden, self.video_out, dropout=self.video_prob)
         self.text_subnet = SubNet(self.text_in, self.text_hidden, self.text_out, dropout=self.text_prob)
@@ -466,14 +469,13 @@ class LmfModel(nn.Module):
             video_x: tensor of shape (batch_size, seq_len, video_in)
             text_x: tensor of shape (batch_size, sequence_len, text_in)
         """
-        audio_x, video_x, text_x = features
+        [audio_x, video_x, text_x] = features
         audio_h = self.audio_subnet(audio_x)
         video_h = self.video_subnet(video_x)
         text_h = self.text_subnet(text_x)
         
-        """print(audio_x.shape, video_x.shape, text_x.shape)
+        print(audio_x.shape, video_x.shape, text_x.shape)
         print(audio_h.shape, video_h.shape, text_h.shape)
-        sys.exit(0)"""
 
         batch_size = audio_h.data.shape[0]
 
@@ -501,3 +503,119 @@ class LmfModel(nn.Module):
         activation = self.final_activation(output) # torch.Size([batch_size, 1]) 
         return activation, output
 
+class TfnModel(nn.Module):
+    '''
+    Amir Zadeh, Minghai Chen, Soujanya Poria, et al., “Tensor fusion network for multimodal sentiment analysis,” in EMNLP, 2017, pp. 1103–1114.
+    '''
+
+    def __init__(self, params):
+        '''
+        Args:
+            input_dims - a length-3 tuple, contains (audio_dim, video_dim, text_dim)
+            hidden_dims - another length-3 tuple, similar to input_dims
+            text_out - int, specifying the resulting dimensions of the text subnetwork
+            dropouts - a length-4 tuple, contains (audio_dropout, video_dropout, text_dropout, post_fusion_dropout)
+            post_fusion_dim - int, specifying the size of the sub-networks after tensorfusion
+        Output:
+            (return value in forward) a scalar value between -3 and 3
+        '''
+        super(TfnModel, self).__init__()
+
+        self.params = params
+        input_dims=params.d_in  
+        hidden_dims=(300, 300, 300) # params.hidden_dims
+        h2_dims=(300, 300, 300)
+        dropouts=(0.4, 0.4, 0.4, 0.4)
+        output_dim=params.n_targets
+
+        # dimensions are specified in the order of audio, video and text
+        self.audio_in = input_dims[0]
+        self.video_in = input_dims[1]
+        self.text_in = input_dims[2]
+
+        self.audio_hidden = hidden_dims[0]
+        self.video_hidden = hidden_dims[1]
+        self.text_hidden = hidden_dims[2]
+
+        self.audio_out = h2_dims[0]
+        self.video_out = h2_dims[1]
+        self.text_out = h2_dims[2]
+
+        self.post_fusion_dim = 128
+
+        self.audio_prob = dropouts[0]
+        self.video_prob = dropouts[1]
+        self.text_prob = dropouts[2]
+        self.post_fusion_prob = dropouts[3]
+
+        # define the pre-fusion subnetworks
+        #self.audio_subnet = nn.Linear(self.audio_in, self.audio_hidden)
+        #self.video_subnet = nn.Linear(self.video_in, self.video_hidden)
+        #self.text_subnet = nn.Linear(self.text_in, self.text_hidden)
+        self.audio_subnet = SubNet(self.audio_in, self.audio_hidden, self.audio_out, dropout=self.audio_prob)
+        self.video_subnet = SubNet(self.video_in, self.video_hidden, self.video_out, dropout=self.video_prob)
+        self.text_subnet = SubNet(self.text_in, self.text_hidden, self.text_out, dropout=self.text_prob)
+
+
+        # define the post_fusion layers
+        self.post_fusion_dropout = nn.Dropout(p=self.post_fusion_prob)
+        self.post_fusion_layer_1 = nn.Linear((self.text_hidden + 1) * (self.video_hidden + 1) * (self.audio_hidden + 1), self.post_fusion_dim)
+        self.post_fusion_layer_2 = nn.Linear(self.post_fusion_dim, output_dim)
+        # self.post_fusion_layer_3 = nn.Linear(self.post_fusion_dim, n_class)
+
+        # in TFN we are doing a regression with constrained output range: (-3, 3), hence we'll apply sigmoid to output
+        # shrink it to (0, 1), and scale\shift it back to range (-3, 3)
+        # self.output_range = Parameter(torch.FloatTensor([6]), requires_grad=False)
+        # self.output_shift = Parameter(torch.FloatTensor([-3]), requires_grad=False)
+
+        # muse output
+        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
+
+    def forward(self, features, feature_lens):
+        """
+        Input: feature: tuple of (feat_a, feat_v, feat_t), each feat is a tensor of shape seq_len, feature_dim
+        Args:
+            audio_x: tensor of shape (batch_size, seq_len, audio_in)
+            video_x: tensor of shape (batch_size, seq_len, video_in)
+            text_x: tensor of shape (batch_size, sequence_len, text_in)
+        """
+        [audio_x, video_x, text_x] = features
+        audio_h = self.audio_subnet(audio_x)
+        video_h = self.video_subnet(video_x)
+        text_h = self.text_subnet(text_x)
+
+        print(audio_x.shape, video_x.shape, text_x.shape)
+        print(audio_h.shape, video_h.shape, text_h.shape)
+        
+        batch_size = audio_h.data.shape[0]
+
+        # next we perform "tensor fusion", which is essentially appending 1s to the tensors and take Kronecker product
+        if audio_h.is_cuda:
+            DTYPE = torch.cuda.FloatTensor
+        else:
+            DTYPE = torch.FloatTensor
+
+        _audio_h = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), audio_h), dim=1)
+        _video_h = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), video_h), dim=1)
+        _text_h = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), text_h), dim=1)
+
+        # _audio_h has shape (batch_size, audio_in + 1), _video_h has shape (batch_size, _video_in + 1)
+        # we want to perform outer product between the two batch, hence we unsqueenze them to get
+        # (batch_size, audio_in + 1, 1) X (batch_size, 1, video_in + 1)
+        # fusion_tensor will have shape (batch_size, audio_in + 1, video_in + 1)
+        fusion_tensor = torch.bmm(_audio_h.unsqueeze(2), _video_h.unsqueeze(1))
+
+        # next we do kronecker product between fusion_tensor and _text_h. This is even trickier
+        # we have to reshape the fusion tensor during the computation
+        # in the end we don't keep the 3-D tensor, instead we flatten it
+        fusion_tensor = fusion_tensor.view(-1, (self.audio_hidden + 1) * (self.video_hidden + 1), 1)
+        fusion_tensor = torch.bmm(fusion_tensor, _text_h.unsqueeze(1)).view(batch_size, -1)
+
+        post_fusion_dropped = self.post_fusion_dropout(fusion_tensor)
+        output = F.relu(self.post_fusion_layer_1(post_fusion_dropped))
+        output = F.relu(self.post_fusion_layer_2(output))
+        # output = self.post_fusion_layer_3(post_fusion_y_2)
+        # output = post_fusion_y_3 * self.output_range + self.output_shift
+        activation = self.final_activation(output) # torch.Size([batch_size, 1]) 
+        print(activation.shape, output.shape) # torch.Size([batch_size, 1])
+        return activation, output

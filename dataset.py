@@ -60,12 +60,16 @@ class MultiModalMuSeDataset(Dataset):
             label: tensor of corresponding label(s) (shape 1 for n-to-1, else (seq_len,1))
             meta: list of lists containing corresponding meta data
         """
-        feature = (self.features_a[idx], self.features_v[idx], self.features_t[idx])
-        feature_len = self.feature_lens[idx]
+        features = [self.features_a[idx], self.features_v[idx], self.features_t[idx]]
+        # different sized tensors: list/tuple to tensor, if use_gpu .to_cuda()?
+        # features = [torch.from_numpy(item).float() for item in features] 
+        # features = [torch.tensor(f, dtype=torch.float) for f in features]
+        # features = torch.Tensor(features)
+        feature_len = [self.feature_lens[idx], self.feature_lens_v[idx], self.feature_lens_t[idx]]
         label = self.labels[idx]
         meta = self.metas[idx]
 
-        sample = feature, feature_len, label, meta
+        sample = features, feature_len, label, meta
         return sample
 
 
@@ -123,15 +127,28 @@ class MuSeDataset(Dataset):
         sample = feature, feature_len, label, meta
         return sample
 
-
 def custom_collate_fn(data):
     """
     Custom collate function to ensure that the meta data are not treated with standard collate, but kept as ndarrays
-    :param data:
+    :param data: features, feature_lens, labels, metas 
     :return:
     """
     tensors = [d[:3] for d in data]
     np_arrs = [d[3] for d in data]
     coll_features, coll_feature_lens, coll_labels = default_collate(tensors)
+    np_arrs_coll = np.row_stack(np_arrs)
+    # print(len(data), len(tensors), len(coll_features))
+    return coll_features, coll_feature_lens, coll_labels, np_arrs_coll
+
+def custom_mm_collate_fn(data):
+    """
+    Custom collate function for multi-modal data input
+    :param data: feat_a, feat_v, feat_t, feature_lens, labels, metas
+    :return:
+    """
+    tensors = [d[:5] for d in data]
+    np_arrs = [d[5] for d in data]
+    coll_feat_a, coll_feat_v, coll_feat_t, coll_feature_lens, coll_labels = default_collate(tensors)
+    coll_features = (coll_feat_a, coll_feat_v, coll_feat_t)
     np_arrs_coll = np.row_stack(np_arrs)
     return coll_features, coll_feature_lens, coll_labels, np_arrs_coll

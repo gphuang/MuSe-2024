@@ -79,8 +79,12 @@ def get_predictions(model, task, data_loader, use_gpu=False):
 
             if use_gpu:
                 model.cuda()
-                features = features.cuda()
-                feature_lens = feature_lens.cuda()
+                if type(features) is list:
+                    features = [_feat.cuda() for _feat in features]
+                    feature_lens = [_len.cuda() for _len in feature_lens]
+                else:
+                    features = features.cuda()
+                    feature_lens = feature_lens.cuda()
                 labels = labels.cuda()
 
             preds,_ = model(features, feature_lens)
@@ -114,8 +118,12 @@ def evaluate(task, model, data_loader, loss_fn, eval_fn, use_gpu=False, predict=
 
             if use_gpu:
                 model.cuda()
-                features = features.cuda()
-                feature_lens = feature_lens.cuda()
+                if type(features) is list:
+                    features = [_feat.cuda() for _feat in features]
+                    feature_lens = [_len.cuda() for _len in feature_lens]
+                else:
+                    features = features.cuda()
+                    feature_lens = feature_lens.cuda()
                 labels = labels.cuda()
 
             preds,_ = model(features, feature_lens)

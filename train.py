@@ -19,8 +19,12 @@ def train(model, train_loader, optimizer, loss_fn, use_gpu=False):
         features, feature_lens, labels, metas = batch_data
 
         if use_gpu:
-            features = features.cuda()
-            feature_lens = feature_lens.cuda()
+            if type(features) is list:
+                features = [_feat.cuda() for _feat in features]
+                feature_lens = [_len.cuda() for _len in feature_lens]
+            else:
+                features = features.cuda()
+                feature_lens = feature_lens.cuda()
             labels = labels.cuda()
 
         optimizer.zero_grad()
@@ -80,4 +84,5 @@ def train_model(task, model, data_loader, epochs, lr, model_path, identifier, us
 
     print(f'ID/Seed {identifier} | '
           f'Best [Val {eval_metric_str}]:{best_val_score:>7.4f} | Loss: {best_val_loss:>.4f}')
+    print(f'Best model saved to file: {best_model_file}')
     return best_val_loss, best_val_score, best_model_file

@@ -12,9 +12,8 @@ from torch import nn
 import config
 from config import TASKS, PERCEPTION, HUMOR
 from data_parser import load_data
-from dataset import MultiModalMuSeDataset, MuSeDataset, custom_collate_fn
+from dataset import MultiModalMuSeDataset, MuSeDataset, custom_collate_fn, custom_mm_collate_fn
 from eval import evaluate, calc_auc, calc_pearsons
-from model import Model
 from train import train_model
 from utils import Logger, seed_worker, log_results
 
@@ -25,11 +24,7 @@ def parse_args():
     parser.add_argument('--task', type=str, required=True, choices=TASKS,
                         help=f'Specify the task from {TASKS}.')
     parser.add_argument('--feature', default='egemaps --normalize',
-                        help='Specify the features used (only one).')
-    parser.add_argument('--feature_type', default='unimodal',
-                        help='Specify the feature type.')
-    parser.add_argument('--fusion_features', default="w2v-msp faus bert-base-uncased",
-                        help='Specify the fusion features (audio, video, text).')
+                        help='Specify the features used: 1 for unimodal, 3 (a,v,t) for multimodal.')
     parser.add_argument('--label_dim', default="assertiv", choices=config.PERCEPTION_LABELS)
     parser.add_argument('--normalize', action='store_true',
                         help='Specify whether to normalize features (default: False).')
@@ -108,12 +103,13 @@ def main(args):
     args.paths['partition'] = os.path.join(config.PATH_TO_METADATA[args.task], f'partition.csv')
 
     #data input 
+    collate_fn=custom_collate_fn
     if args.model_type.lower() in ['lmf', 'tfn', 'mfn']:
         print('prepare multi-modal data input ')
         data={}
-        audio_feature = args.fusion_features.split()[0] # 'w2v-msp' # 
-        video_feature = args.fusion_features.split()[1] # 'vit-fer' #
-        text_feature = args.fusion_features.split()[2] # 'bert-base-uncased' # 
+        audio_feature = args.feature.split()[0] # 'w2v-msp' # 
+        video_feature = args.feature.split()[1] # 'vit-fer' #
+        text_feature = args.feature.split()[2] # 'bert-base-uncased' # 
         data['audio'] = load_data(args.task, args.paths, audio_feature, args.label_dim, args.normalize, save=args.cache)
         data['video'] = load_data(args.task, args.paths, video_feature, args.label_dim, args.normalize, save=args.cache)
         data['text'] = load_data(args.task, args.paths, text_feature, args.label_dim, args.normalize, save=args.cache)
@@ -122,12 +118,10 @@ def main(args):
         """from torch.utils.data import ConcatDataset
         datasets = {partition: ConcatDataset([MuSeDataset(data_a, partition), MuSeDataset(data_v, partition), MuSeDataset(data_t, partition)]) for partition in data_a.keys()}
         print(datasets)"""
-        args.feature_type = '+'.join(args.fusion_features.split())
     else:
         data = load_data(args.task, args.paths, args.feature, args.label_dim, args.normalize, save=args.cache)
         datasets = {partition:MuSeDataset(data, partition) for partition in data.keys()}
         args.d_in = datasets['train'].get_feature_dim()
-        args.feature_type = args.feature.replace(os.path.sep, "-")
 
     args.n_targets = config.NUM_TARGETS[args.task]
     args.n_to_1 = args.task in config.N_TO_1_TASKS
@@ -135,7 +129,38 @@ def main(args):
     loss_fn, loss_str = get_loss_fn(args.task)
     eval_fn, eval_str = get_eval_fn(args.task)
 
-    if args.eval_model is None:  # Train and validate for each seed
+    # model type
+    if args.model_type.lower() == 'rnn':
+        print('Use rnn (default).')
+        from model import Model
+        model = Model(args)
+    if args.model_type.lower() == 'cnn':
+        print('Use cnn.')
+        from model import CnnModel  
+        model = CnnModel(args)
+    if args.model_type.lower() == 'crnn':
+        print('Use crnn.')
+        from model import CrnnModel
+        model = CrnnModel(args)
+    if args.model_type.lower() == 'cnn-attn':
+        print('Use self attention (with cnn).')
+        from model import CnnAttnModel 
+        model = CnnAttnModel(args)
+    if args.model_type.lower() == 'crnn-attn':
+        print('Use self attention (with crnn).')
+        from model import CrnnAttnModel 
+        model = CrnnAttnModel(args)
+    if args.model_type.lower() == 'lmf':
+        print('Use low-rank multimodal fusion.')
+        from model import LmfModel
+        model = LmfModel(args)
+    if args.model_type.lower() == 'tfn':
+        print('Use tensor fusion network for multimodal.')
+        from model import TfnModel
+        model = TfnModel(args)
+
+    # Train and validate for each seed
+    if args.eval_model is None:  
         seeds = range(args.seed, args.seed + args.n_seeds)
         val_losses, val_scores, best_model_files, test_scores = [], [], [], []
 
@@ -148,32 +173,7 @@ def main(args):
                 data_loader[partition] = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
                                                                      num_workers=4,
                                                                      worker_init_fn=seed_worker,
-                                                                     collate_fn=custom_collate_fn)
-            
-            if args.model_type.lower() == 'rnn':
-                print('Use rnn (default).')
-                model = Model(args)
-            if args.model_type.lower() == 'cnn':
-                print('Use cnn.')
-                from model import CnnModel  
-                model = CnnModel(args)
-            if args.model_type.lower() == 'crnn':
-                print('Use crnn.')
-                from model import CrnnModel
-                model = CrnnModel(args)
-            if args.model_type.lower() == 'cnn-attn':
-                print('Use self attention (with cnn).')
-                from model import CnnAttnModel 
-                model = CnnAttnModel(args)
-            if args.model_type.lower() == 'crnn-attn':
-                print('Use self attention (with crnn).')
-                from model import CrnnAttnModel 
-                model = CrnnAttnModel(args)
-            if args.model_type.lower() == 'lmf':
-                print('Use low-rank multimodal fusion.')
-                from model import LmfModel
-                model = LmfModel(args)
-
+                                                                     collate_fn=collate_fn)
             print('=' * 50)
             print(f'Training model... [seed {seed}] for at most {args.epochs} epochs')
 
@@ -184,6 +184,7 @@ def main(args):
                                                                regularization=args.regularization,
                                                                early_stopping_patience=args.early_stopping_patience)
             # restore best model encountered during training
+            print(f'Best model file: {best_model_file}')
             model = torch.load(best_model_file)
 
             if not args.predict:  # run evaluation only if test labels are available
@@ -222,7 +223,7 @@ def main(args):
             data_loader[partition] = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
                                                                  num_workers=4,
                                                                  worker_init_fn=seed_worker,
-                                                                 collate_fn=custom_collate_fn)
+                                                                 collate_fn=collate_fn)
         _, valid_score = evaluate(args.task, model, data_loader['devel'], loss_fn=loss_fn, eval_fn=eval_fn,
                                   use_gpu=args.use_gpu)
         print(f'Evaluating {model_file}:')
@@ -250,12 +251,11 @@ if __name__ == '__main__':
     print("Start",flush=True)
     args = parse_args()
 
-    args.log_file_name =  '{}_{}_[{}]_[{}]_[{}_{}]'.format(args.model_type.upper(), 
-                                                                    datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M"), 
-                                                                    args.feature_type,
-                                                                    args.model_dim, 
-                                                                    args.lr,
-                                                                    args.batch_size)
+    args.log_file_name =  '{}_{}_[{}]_[{}_{}]'.format(args.model_type.upper(), 
+                                                            datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M"), 
+                                                            '_'.join(args.feature.replace(os.path.sep, "-").split()),
+                                                            args.lr,
+                                                            args.batch_size)
 
     # adjust your paths in config.py
     task_id = args.task if args.task != PERCEPTION else os.path.join(args.task, args.label_dim)
