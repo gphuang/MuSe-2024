@@ -104,7 +104,7 @@ def main(args):
 
     #data input 
     collate_fn=custom_collate_fn
-    if args.model_type.lower() in ['lmf', 'tfn', 'mfn']:
+    if args.model_type.lower() in ['lmf', 'tfn', 'iaf', 'ltf', 'laf']:
         print('prepare multi-modal data input ')
         data={}
         audio_feature = args.feature.split()[0] # 'w2v-msp' # 
@@ -115,9 +115,6 @@ def main(args):
         data['text'] = load_data(args.task, args.paths, text_feature, args.label_dim, args.normalize, save=args.cache)
         datasets = {partition:MultiModalMuSeDataset(data, partition) for partition in data['audio'].keys()}
         args.d_in = datasets['train'].get_feature_dim() # (d_in_a, d_in_v, d_in_t)
-        """from torch.utils.data import ConcatDataset
-        datasets = {partition: ConcatDataset([MuSeDataset(data_a, partition), MuSeDataset(data_v, partition), MuSeDataset(data_t, partition)]) for partition in data_a.keys()}
-        print(datasets)"""
     else:
         data = load_data(args.task, args.paths, args.feature, args.label_dim, args.normalize, save=args.cache)
         datasets = {partition:MuSeDataset(data, partition) for partition in data.keys()}
@@ -158,6 +155,10 @@ def main(args):
         print('Use tensor fusion network for multimodal.')
         from model import TfnModel
         model = TfnModel(args)
+    if args.model_type.lower() == 'iaf':
+        print('Use intermedial attention fusion.')
+        from model import IafModel
+        model = IafModel(args)
 
     # Train and validate for each seed
     if args.eval_model is None:  
@@ -277,6 +278,7 @@ if __name__ == '__main__':
                        'partition': config.PARTITION_FILES[args.task]})
 
     sys.stdout = Logger(os.path.join(args.paths['log'], args.log_file_name + '.txt'))
+    print(args.paths['model'])
     print(' '.join(sys.argv))
 
     main(args)

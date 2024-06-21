@@ -65,7 +65,7 @@ class SubNet(nn.Module):
             (return value in forward) a tensor of shape (batch_size, out_size)
         '''
         super(SubNet, self).__init__()
-        self.rnn = nn.GRU(in_size, hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional, batch_first=True)
+        self.rnn = nn.LSTM(in_size, hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional, batch_first=True)
         self.dropout = nn.Dropout(dropout)
         self.linear_1 = nn.Linear(hidden_size, out_size)
         self.bidirectional = bidirectional
@@ -76,8 +76,6 @@ class SubNet(nn.Module):
             x: tensor of shape (batch_size, sequence_len, in_size)
         '''
         _, final_states = self.rnn(x)
-        if self.bidirectional:
-            pass
         h = self.dropout(final_states[0].squeeze())
         y_1 = self.linear_1(h)
         return y_1
@@ -383,6 +381,130 @@ class CrnnAttnModel(nn.Module):
         activation = self.final_activation(x) # torch.Size([batch_size, 1]) 
         return activation, x
 
+class IafModel(nn.Module):
+    """
+    Intermedia-attention fusion method:
+
+    Chumachenko, Kateryna, et al. Self-Attention Fusion for Audiovisual Emotion Recognition with Incomplete Data. arXiv:2201.11095, arXiv, 26 Jan. 2022, https://doi.org/10.48550/arXiv.2201.11095.
+    
+    https://github.com/gphuang/multimodal-emotion-recognition-ravdess/blob/main/models/multimodalcnn.py
+    """
+    def __init__(self, params):
+        """
+         Args:
+            ()
+        Output:
+            (return value in forward)
+        """
+        super(IafModel, self).__init__()
+        
+        fusion='ia'
+        num_heads=1
+        e_dim = 300
+        input_dim_video = 300
+        input_dim_audio = 300
+
+        input_dims=params.d_in 
+        hidden_dims=(300, 300, 300) # params.hidden_dims
+        h2_dims=(300, 300, 300) # params.h2_dims
+        output_dim=params.n_targets
+        dropouts=(0.4, 0.4, 0.4, 0.4) #params.fusion_dropouts
+
+        # dimensions are specified in the order of audio, video and text
+        self.audio_in = input_dims[0]
+        self.video_in = input_dims[1]
+        self.text_in = input_dims[2]
+
+        self.audio_hidden = hidden_dims[0]
+        self.video_hidden = hidden_dims[1]
+        self.text_hidden = hidden_dims[2]
+        
+        self.audio_out = h2_dims[0]
+        self.video_out = h2_dims[1]
+        self.text_out = h2_dims[2]
+        
+        self.audio_prob = dropouts[0]
+        self.video_prob = dropouts[1]
+        self.text_prob = dropouts[2]
+        self.post_fusion_prob = dropouts[3]
+
+        # define the pre-fusion subnetworks
+        self.audio_subnet = SubNet(self.audio_in, self.audio_hidden, self.audio_out, num_layers=2, bidirectional=True, dropout=self.audio_prob)
+        self.video_subnet = SubNet(self.video_in, self.video_hidden, self.video_out, num_layers=2, bidirectional=True, dropout=self.video_prob)
+        self.text_subnet = SubNet(self.text_in, self.text_hidden, self.text_out, num_layers=2, bidirectional=True, dropout=self.text_prob)
+
+        self.attn = Attention(in_dim_k=300, in_dim_q=300, out_dim=300, num_heads=num_heads)
+        #self.av1 = Attention(in_dim_k=self.video_hidden, in_dim_q=self.audio_hidden, out_dim=self.audio_hidden, num_heads=num_heads)
+        #self.va1 = Attention(in_dim_k=self.audio_hidden, in_dim_q=self.video_hidden, out_dim=self.video_hidden, num_heads=num_heads)
+        #self.at1 = Attention(in_dim_k=self.text_hidden, in_dim_q=self.audio_hidden, out_dim=self.audio_hidden, num_heads=num_heads)
+        #self.ta1 = Attention(in_dim_k=self.audio_hidden, in_dim_q=self.text_hidden, out_dim=self.text_hidden, num_heads=num_heads)
+        #self.vt1 = Attention(in_dim_k=self.text_hidden, in_dim_q=self.video_hidden, out_dim=self.video_hidden, num_heads=num_heads)
+        #self.tv1 = Attention(in_dim_k=self.video_hidden, in_dim_q=self.text_hidden, out_dim=self.text_hidden, num_heads=num_heads)
+        
+        self.classifier_1 = nn.Sequential(nn.Linear(e_dim*2, output_dim),)
+        
+        # muse output
+        self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
+    
+    def forward(self, features, feature_lens):
+        """
+        Input: feature: tuple of (feat_a, feat_v, feat_t), each feat is a tensor of shape seq_len, feature_dim
+        Args:
+            audio_x: tensor of shape (batch_size, seq_len, audio_in)
+            video_x: tensor of shape (batch_size, seq_len, video_in)
+            text_x: tensor of shape (batch_size, sequence_len, text_in)
+        """
+        [audio_x, video_x, text_x] = features
+
+        audio_h = self.audio_subnet(audio_x)
+        video_h = self.video_subnet(video_x)
+        text_h = self.text_subnet(text_x)
+
+        #print(audio_x.shape, video_x.shape, )
+        #print(audio_h.shape, video_h.shape)
+
+        _, h_av = self.attn(video_h, audio_h)
+        _, h_va = self.attn(audio_h, video_h)
+        _, h_at = self.attn(text_h, audio_h)
+        _, h_ta = self.attn(audio_h, text_h)
+        _, h_vt = self.attn(text_h, video_h)
+        _, h_tv = self.attn(video_h, text_h)
+
+        #print(h_av.shape, h_va.shape)
+
+        h_av = self.average_head(h_av)
+        h_va = self.average_head(h_va)
+        h_ta = self.average_head(h_ta)
+        h_at = self.average_head(h_at)
+        h_tv = self.average_head(h_tv)
+        h_vt = self.average_head(h_vt)
+
+        #print(audio_x.shape, (h_va + h_ta).shape)
+
+        audio_x = (h_va + h_ta)audio_x
+        video_x = (h_av + h_tv)*video_x
+        text_x = (h_at + h_vt)*text_x 
+        
+        print(audio_x.shape, video_x.shape)
+        sys.exit(0)
+
+        audio_pooled = audio_x.mean([-1]) #mean accross temporal dimension
+        video_pooled = video_x.mean([-1])
+
+        x = torch.cat((audio_pooled, video_pooled), dim=-1)
+        print(x.shape)
+        output = self.classifier_1(x)
+        print(output.shape)
+        activation = self.final_activation(output) # torch.Size([batch_size, 1]) 
+        print(activation.shape)
+        return activation, output
+    
+    def average_head(self, _h):
+        if _h.size(1) > 1: #if more than 1 head, take average
+            _h = torch.mean(_h, axis=1).unsqueeze(1)
+        _h = _h.sum([-2])
+        return _h 
+
 class LmfModel(nn.Module):
     """
     Zhun Liu, Ying Shen, Varun Bharadhwaj Lakshmi- narasimhan, et al., “Efficient low-rank multimodal fusion with modality-specific factors,” in ACL (1). 2018, pp. 2247–2256, ACL.
@@ -405,7 +527,7 @@ class LmfModel(nn.Module):
         super(LmfModel, self).__init__()
         
         self.params = params
-        input_dims=params.d_in # (300, 300, 300)
+        input_dims=params.d_in 
         hidden_dims=(300, 300, 300) # params.hidden_dims
         h2_dims=(300, 300, 300) # params.h2_dims
         output_dim=params.n_targets
@@ -584,8 +706,8 @@ class TfnModel(nn.Module):
         video_h = self.video_subnet(video_x)
         text_h = self.text_subnet(text_x)
 
-        print(audio_x.shape, video_x.shape, text_x.shape)
-        print(audio_h.shape, video_h.shape, text_h.shape)
+        #print(audio_x.shape, video_x.shape, text_x.shape)
+        #print(audio_h.shape, video_h.shape, text_h.shape)
         
         batch_size = audio_h.data.shape[0]
 

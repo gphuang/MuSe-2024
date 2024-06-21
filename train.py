@@ -45,6 +45,7 @@ def train(model, train_loader, optimizer, loss_fn, use_gpu=False):
 def save_model(model, model_folder, id):
     model_file_name = f'model_{id}.pth'
     model_file = os.path.join(model_folder, model_file_name)
+    print(f'save_model: {model_file}')
     torch.save(model, model_file)
     return model_file
 

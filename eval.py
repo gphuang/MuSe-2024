@@ -14,6 +14,7 @@ def calc_pearsons(preds, labels):
         preds = np.concatenate(preds)
     if not type(labels) == np.ndarray:
         labels = np.concatenate(labels)
+    print(preds, labels)
     r = stats.pearsonr(preds, labels)
     return r[0]
 
