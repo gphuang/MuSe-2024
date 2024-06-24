@@ -6,26 +6,27 @@ import torch.optim as optim
 
 from eval import evaluate
 
+# Device configuration
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f'Device: {device}')
 
 def train(model, train_loader, optimizer, loss_fn, use_gpu=False):
 
     train_loss_list = []
 
     model.train()
-    if use_gpu:
-        model.cuda()
+    model.to(device)
 
     for batch, batch_data in enumerate(train_loader, 1):
         features, feature_lens, labels, metas = batch_data
 
-        if use_gpu:
-            if type(features) is list:
-                features = [_feat.cuda() for _feat in features]
-                feature_lens = [_len.cuda() for _len in feature_lens]
-            else:
-                features = features.cuda()
-                feature_lens = feature_lens.cuda()
-            labels = labels.cuda()
+        if type(features) is list:
+            features = [_feat.to(device) for _feat in features]
+            feature_lens = [_len.to(device) for _len in feature_lens]
+        else:
+            features = features.to(device)
+            feature_lens = feature_lens.to(device)
+        labels = labels.to(device)
 
         optimizer.zero_grad()
 
@@ -69,11 +70,14 @@ def train_model(task, model, data_loader, epochs, lr, model_path, identifier, us
         print(f'Epoch:{epoch:>3} / {epochs} | [Val] | Loss: {val_loss:>.4f} | [{eval_metric_str}]: {val_score:>7.4f}')
         print('-' * 50)
 
-        if val_score > best_val_score:
+        if not val_score:
+            print('val_score is nan', val_score)
+        elif val_score > best_val_score:
             early_stop = 0
             best_val_score = val_score
             best_val_loss = val_loss
             best_model_file = save_model(model, model_path, identifier)
+            print(f'Best model saved to file: {best_model_file}')
 
         else:
             early_stop += 1
@@ -85,5 +89,4 @@ def train_model(task, model, data_loader, epochs, lr, model_path, identifier, us
 
     print(f'ID/Seed {identifier} | '
           f'Best [Val {eval_metric_str}]:{best_val_score:>7.4f} | Loss: {best_val_loss:>.4f}')
-    print(f'Best model saved to file: {best_model_file}')
     return best_val_loss, best_val_score, best_model_file

@@ -151,6 +151,8 @@ class Model(nn.Module):
         x = self.encoder(x, x_len) # torch.Size([59, 256])
         x = self.out(x) # torch.Size([59, 1])
         activation = self.final_activation(x) # torch.Size([59, 1])
+        # print(activation, activation.shape)
+        # sys.exit(0)
         return activation, x
 
     def set_n_to_1(self, n_to_1):
@@ -400,14 +402,11 @@ class IafModel(nn.Module):
         
         fusion='ia'
         num_heads=1
-        e_dim = 300
-        input_dim_video = 300
-        input_dim_audio = 300
 
         input_dims=params.d_in 
+        output_dim=params.n_targets
         hidden_dims=(300, 300, 300) # params.hidden_dims
         h2_dims=(300, 300, 300) # params.h2_dims
-        output_dim=params.n_targets
         dropouts=(0.4, 0.4, 0.4, 0.4) #params.fusion_dropouts
 
         # dimensions are specified in the order of audio, video and text
@@ -429,19 +428,17 @@ class IafModel(nn.Module):
         self.post_fusion_prob = dropouts[3]
 
         # define the pre-fusion subnetworks
+        self.audio_subnet0 = SubNet(self.audio_in, self.audio_hidden, self.audio_out, num_layers=1, bidirectional=False, dropout=self.audio_prob)
+        self.video_subnet0 = SubNet(self.video_in, self.video_hidden, self.video_out, num_layers=1, bidirectional=False, dropout=self.video_prob)
+        self.text_subnet0 = SubNet(self.text_in, self.text_hidden, self.text_out, num_layers=1, bidirectional=False, dropout=self.text_prob)
+
         self.audio_subnet = SubNet(self.audio_in, self.audio_hidden, self.audio_out, num_layers=2, bidirectional=True, dropout=self.audio_prob)
         self.video_subnet = SubNet(self.video_in, self.video_hidden, self.video_out, num_layers=2, bidirectional=True, dropout=self.video_prob)
         self.text_subnet = SubNet(self.text_in, self.text_hidden, self.text_out, num_layers=2, bidirectional=True, dropout=self.text_prob)
 
         self.attn = Attention(in_dim_k=300, in_dim_q=300, out_dim=300, num_heads=num_heads)
-        #self.av1 = Attention(in_dim_k=self.video_hidden, in_dim_q=self.audio_hidden, out_dim=self.audio_hidden, num_heads=num_heads)
-        #self.va1 = Attention(in_dim_k=self.audio_hidden, in_dim_q=self.video_hidden, out_dim=self.video_hidden, num_heads=num_heads)
-        #self.at1 = Attention(in_dim_k=self.text_hidden, in_dim_q=self.audio_hidden, out_dim=self.audio_hidden, num_heads=num_heads)
-        #self.ta1 = Attention(in_dim_k=self.audio_hidden, in_dim_q=self.text_hidden, out_dim=self.text_hidden, num_heads=num_heads)
-        #self.vt1 = Attention(in_dim_k=self.text_hidden, in_dim_q=self.video_hidden, out_dim=self.video_hidden, num_heads=num_heads)
-        #self.tv1 = Attention(in_dim_k=self.video_hidden, in_dim_q=self.text_hidden, out_dim=self.text_hidden, num_heads=num_heads)
-        
-        self.classifier_1 = nn.Sequential(nn.Linear(e_dim*2, output_dim),)
+
+        self.classifier_1 = nn.Sequential(nn.Linear(300*3, output_dim),)
         
         # muse output
         self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
@@ -455,13 +452,22 @@ class IafModel(nn.Module):
             text_x: tensor of shape (batch_size, sequence_len, text_in)
         """
         [audio_x, video_x, text_x] = features
+        #print(audio_x.shape) # torch.Size([59, 80, 1024])
 
-        audio_h = self.audio_subnet(audio_x)
-        video_h = self.video_subnet(video_x)
-        text_h = self.text_subnet(text_x)
+        audio_h0 = self.audio_subnet0(audio_x)
+        video_h0 = self.video_subnet0(video_x)
+        text_h0 = self.text_subnet0(text_x)
+        #print(audio_x.shape, audio_h0.shape) #torch.Size([59, 80, 1024]) torch.Size([59, 300])
 
-        #print(audio_x.shape, video_x.shape, )
-        #print(audio_h.shape, video_h.shape)
+        audio_p = audio_x.permute(1,0,2)
+        video_p = video_x.permute(1,0,2)
+        text_p = text_x.permute(1,0,2)
+        #print(audio_x.shape, audio_p.shape) # torch.Size([59, 80, 1024]) torch.Size([80, 59, 1024])
+
+        audio_h = self.audio_subnet(audio_p)
+        video_h = self.video_subnet(video_p)
+        text_h = self.text_subnet(text_p)
+        #print(audio_x.shape, audio_h.shape) # torch.Size([59, 80, 1024]) torch.Size([4, 80, 300])
 
         _, h_av = self.attn(video_h, audio_h)
         _, h_va = self.attn(audio_h, video_h)
@@ -469,32 +475,35 @@ class IafModel(nn.Module):
         _, h_ta = self.attn(audio_h, text_h)
         _, h_vt = self.attn(text_h, video_h)
         _, h_tv = self.attn(video_h, text_h)
-
-        #print(h_av.shape, h_va.shape)
-
+        #print(h_va.shape, h_ta.shape) # torch.Size([4, 1, 81, 80]) torch.Size([4, 1, 151, 80])
+    
         h_av = self.average_head(h_av)
         h_va = self.average_head(h_va)
         h_ta = self.average_head(h_ta)
         h_at = self.average_head(h_at)
         h_tv = self.average_head(h_tv)
         h_vt = self.average_head(h_vt)
-
-        #print(audio_x.shape, (h_va + h_ta).shape)
-
-        audio_x = (h_va + h_ta)audio_x
-        video_x = (h_av + h_tv)*video_x
-        text_x = (h_at + h_vt)*text_x 
-        
-        print(audio_x.shape, video_x.shape)
+        #(audio_h0.shape, h_va.shape, h_ta.shape) # torch.Size([59, 300]) torch.Size([4, 80]) torch.Size([4, 80])
+        sys.exit(0)
+        audio_x = (h_va + h_ta)*audio_h0
+        print(audio_x.shape)
         sys.exit(0)
 
-        audio_pooled = audio_x.mean([-1]) #mean accross temporal dimension
-        video_pooled = video_x.mean([-1])
+        audio_x = torch.matmul((h_va + h_ta), audio_h0)
+        video_x = torch.matmul((h_av + h_tv), video_h0)
+        text_x = torch.matmul((h_at + h_vt), text_h0)
+        
+        print(audio_x.shape, video_x.shape,text_x.shape ) # torch.Size([4, 300])
 
-        x = torch.cat((audio_pooled, video_pooled), dim=-1)
+        #audio_pooled = audio_x.mean([-1]) #mean accross temporal dimension
+        #video_pooled = video_x.mean([-1])
+
+        x = torch.cat((audio_x, video_x, text_x), dim=1)
         print(x.shape)
         output = self.classifier_1(x)
         print(output.shape)
+
+        sys.exit(0)
         activation = self.final_activation(output) # torch.Size([batch_size, 1]) 
         print(activation.shape)
         return activation, output
@@ -503,6 +512,7 @@ class IafModel(nn.Module):
         if _h.size(1) > 1: #if more than 1 head, take average
             _h = torch.mean(_h, axis=1).unsqueeze(1)
         _h = _h.sum([-2])
+        _h = _h.squeeze()
         return _h 
 
 class LmfModel(nn.Module):
@@ -596,8 +606,8 @@ class LmfModel(nn.Module):
         video_h = self.video_subnet(video_x)
         text_h = self.text_subnet(text_x)
         
-        print(audio_x.shape, video_x.shape, text_x.shape)
-        print(audio_h.shape, video_h.shape, text_h.shape)
+        #print(audio_x.shape, video_x.shape, text_x.shape)
+        #print(audio_h.shape, video_h.shape, text_h.shape)
 
         batch_size = audio_h.data.shape[0]
 
@@ -734,10 +744,10 @@ class TfnModel(nn.Module):
         fusion_tensor = torch.bmm(fusion_tensor, _text_h.unsqueeze(1)).view(batch_size, -1)
 
         post_fusion_dropped = self.post_fusion_dropout(fusion_tensor)
-        output = F.relu(self.post_fusion_layer_1(post_fusion_dropped))
-        output = F.relu(self.post_fusion_layer_2(output))
-        # output = self.post_fusion_layer_3(post_fusion_y_2)
-        # output = post_fusion_y_3 * self.output_range + self.output_shift
+        output = self.post_fusion_layer_1(post_fusion_dropped)
+        output = self.post_fusion_layer_2(output) 
         activation = self.final_activation(output) # torch.Size([batch_size, 1]) 
-        print(activation.shape, output.shape) # torch.Size([batch_size, 1])
+        # print(activation.shape, output.shape) # torch.Size([batch_size, 1])
+        # print(activation, activation.shape)
+        # sys.exit(0)
         return activation, output

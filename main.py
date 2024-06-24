@@ -107,6 +107,7 @@ def main(args):
     if args.model_type.lower() in ['lmf', 'tfn', 'iaf', 'ltf', 'laf']:
         print('prepare multi-modal data input ')
         data={}
+        print('args.feature', args.feature)
         audio_feature = args.feature.split()[0] # 'w2v-msp' # 
         video_feature = args.feature.split()[1] # 'vit-fer' #
         text_feature = args.feature.split()[2] # 'bert-base-uncased' # 
@@ -171,16 +172,24 @@ def main(args):
             for partition, dataset in datasets.items():  # one DataLoader for each partition
                 batch_size = args.batch_size if partition == 'train' else 2 * args.batch_size
                 shuffle = True if partition == 'train' else False  # shuffle only for train partition
-                data_loader[partition] = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
+                data_loader[partition] = torch.utils.data.DataLoader(dataset, 
+                                                                     batch_size=batch_size, 
+                                                                     shuffle=shuffle,
                                                                      num_workers=4,
                                                                      worker_init_fn=seed_worker,
                                                                      collate_fn=collate_fn)
             print('=' * 50)
             print(f'Training model... [seed {seed}] for at most {args.epochs} epochs')
-
-            val_loss, val_score, best_model_file = train_model(args.task, model, data_loader, args.epochs,
-                                                               args.lr, args.paths['model'], seed, use_gpu=args.use_gpu,
-                                                               loss_fn=loss_fn, eval_fn=eval_fn,
+            val_loss, val_score, best_model_file = train_model(args.task, 
+                                                               model, 
+                                                               data_loader, 
+                                                               args.epochs,
+                                                               args.lr, 
+                                                               args.paths['model'], 
+                                                               seed, 
+                                                               use_gpu=args.use_gpu,
+                                                               loss_fn=loss_fn, 
+                                                               eval_fn=eval_fn,
                                                                eval_metric_str=eval_str,
                                                                regularization=args.regularization,
                                                                early_stopping_patience=args.early_stopping_patience)
@@ -252,6 +261,8 @@ if __name__ == '__main__':
     print("Start",flush=True)
     args = parse_args()
 
+    # debug
+    print(f'args.feature: {args.feature}, id: {'_'.join(args.feature.replace(os.path.sep, "-").split())}')
     args.log_file_name =  '{}_{}_[{}]_[{}_{}]'.format(args.model_type.upper(), 
                                                             datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M"), 
                                                             '_'.join(args.feature.replace(os.path.sep, "-").split()),
@@ -278,8 +289,6 @@ if __name__ == '__main__':
                        'partition': config.PARTITION_FILES[args.task]})
 
     sys.stdout = Logger(os.path.join(args.paths['log'], args.log_file_name + '.txt'))
-    print(args.paths['model'])
-    print(' '.join(sys.argv))
 
     main(args)
 

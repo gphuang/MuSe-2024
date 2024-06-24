@@ -5,7 +5,9 @@ import torch
 from sklearn.metrics import roc_curve, auc
 from scipy import stats
 
-
+# Device configuration
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f'Device: {device}')
 
 def calc_pearsons(preds, labels):
     if not type(preds) == np.ndarray:
@@ -14,7 +16,7 @@ def calc_pearsons(preds, labels):
         preds = np.concatenate(preds)
     if not type(labels) == np.ndarray:
         labels = np.concatenate(labels)
-    print(preds, labels)
+    print('calc_pearsons: preds, labels, r', preds, len(preds), labels, len(labels))
     r = stats.pearsonr(preds, labels)
     return r[0]
 
@@ -74,19 +76,19 @@ def get_predictions(model, task, data_loader, use_gpu=False):
     full_preds = []
     full_labels = []
     model.eval()
+    model.to(device)
+
     with torch.no_grad():
         for batch, batch_data in enumerate(data_loader, 1):
             features, feature_lens, labels, metas = batch_data
 
-            if use_gpu:
-                model.cuda()
-                if type(features) is list:
-                    features = [_feat.cuda() for _feat in features]
-                    feature_lens = [_len.cuda() for _len in feature_lens]
-                else:
-                    features = features.cuda()
-                    feature_lens = feature_lens.cuda()
-                labels = labels.cuda()
+            if type(features) is list:
+                features = [_feat.to(device) for _feat in features]
+                feature_lens = [_len.to(device) for _len in feature_lens]
+            else:
+                features = features.to(device)
+                feature_lens = feature_lens.to(device)
+            labels = labels.to(device)
 
             preds,_ = model(features, feature_lens)
 
@@ -107,6 +109,8 @@ def evaluate(task, model, data_loader, loss_fn, eval_fn, use_gpu=False, predict=
         full_metas = None
 
     model.eval()
+    model.to(device)
+
     with torch.no_grad():
         for batch, batch_data in enumerate(data_loader, 1):
             features, feature_lens, labels, metas = batch_data
@@ -117,15 +121,13 @@ def evaluate(task, model, data_loader, loss_fn, eval_fn, use_gpu=False, predict=
 
             batch_size = labels.size(0) # TBD: unimodal: features.size(0), multi-modal features is a tuple format
 
-            if use_gpu:
-                model.cuda()
-                if type(features) is list:
-                    features = [_feat.cuda() for _feat in features]
-                    feature_lens = [_len.cuda() for _len in feature_lens]
-                else:
-                    features = features.cuda()
-                    feature_lens = feature_lens.cuda()
-                labels = labels.cuda()
+            if type(features) is list:
+                features = [_feat.to(device) for _feat in features]
+                feature_lens = [_len.to(device) for _len in feature_lens]
+            else:
+                features = features.to(device)
+                feature_lens = feature_lens.to(device)
+            labels = labels.to(device)
 
             preds,_ = model(features, feature_lens)
 
