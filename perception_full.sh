@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=00:09:59
+#SBATCH --time=23:59:59
 #SBATCH --mem=250G
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=6
@@ -11,14 +11,13 @@ module load mamba
 
 source activate muse
 
-model_types=('rnn')  # ('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') 
+model_types=('rnn' 'cnn-attn')  # ('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') 
 labels=('aggressive') # ('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured')
-features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps --normalize' 'ds')
-audio_features=('w2v-msp' 'egemaps --normalize' 'ds' 'hubert-superb')
-video_features=('faus' 'facenet512' 'vit-fer')
-text_features=('bert-base-uncased' 'bert-base-multilingual-cased' 'roberta-base' 'xlm-roberta-large' 'gpt2')
-av_features=('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
-
+features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps' 'ds')
+audio_features=('w2v-msp' 'egemaps') # ('w2v-msp' 'egemaps --normalize' 'ds' 'hubert-superb')
+video_features=('vit-fer') # ('faus' 'facenet512' 'vit-fer')
+text_features=('bert-base-uncased') # ('bert-base-uncased' 'bert-base-multilingual-cased' 'roberta-base' 'xlm-roberta-large' 'gpt2')
+av_features=('avhubert-base-lrs3-iter5') # ('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
 
 # RNN
 nums_rnn_layers=(2)

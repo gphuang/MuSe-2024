@@ -57,6 +57,8 @@ def parse_args():
                         help='Specify whether to use gpu for training (default: False).')
     parser.add_argument('--cache', action='store_true',
                         help='Specify whether to cache data as pickle file (default: False).')
+    parser.add_argument('--save_ckpt', action='store_true',
+                        help='Specify whether to save model check points (default: False).')
     parser.add_argument('--predict', action='store_true',
                         help='Specify when no test labels are available; test predictions will be saved '
                              '(default: False). Incompatible with result_csv')
@@ -187,17 +189,16 @@ def main(args):
                                                                args.lr, 
                                                                args.paths['model'], 
                                                                seed, 
+                                                               save_ckpt=args.save_ckpt,
                                                                use_gpu=args.use_gpu,
                                                                loss_fn=loss_fn, 
                                                                eval_fn=eval_fn,
                                                                eval_metric_str=eval_str,
                                                                regularization=args.regularization,
                                                                early_stopping_patience=args.early_stopping_patience)
-            # restore best model encountered during training
-            print(f'Best model file: {best_model_file}')
-            model = torch.load(best_model_file)
-
-            if not args.predict:  # run evaluation only if test labels are available
+            
+            if args.predict:  # run evaluation only if test labels are available
+                model = torch.load(best_model_file) # restore best model encountered during training
                 test_loss, test_score = evaluate(args.task, model, data_loader['test'], loss_fn=loss_fn,
                                                  eval_fn=eval_fn, use_gpu=args.use_gpu)
                 test_scores.append(test_score)
@@ -213,7 +214,7 @@ def main(args):
         print('=' * 50)
         print(f'Best {eval_str} on [Val] for seed {seeds[best_idx]}: '
               f'[Val {eval_str}]: {val_scores[best_idx]:7.4f}'
-              f"{f' | [Test {eval_str}]: {test_scores[best_idx]:7.4f}' if not args.predict else ''}")
+              f"{f' | [Test {eval_str}]: {test_scores[best_idx]:7.4f}' if args.predict else ''}")
         print('=' * 50)
 
         model_file = best_model_files[best_idx]  # best model of all of the seeds

@@ -43,16 +43,17 @@ def train(model, train_loader, optimizer, loss_fn, use_gpu=False):
     return train_loss
 
 
-def save_model(model, model_folder, id):
+def save_model(model, model_folder, id, save_ckpt=False):
     model_file_name = f'model_{id}.pth'
     model_file = os.path.join(model_folder, model_file_name)
-    print(f'save_model: {model_file}')
-    torch.save(model, model_file)
+    if save_ckpt:
+        print(f'save_model: {model_file}')
+        torch.save(model, model_file)
     return model_file
 
 
 def train_model(task, model, data_loader, epochs, lr, model_path, identifier, use_gpu, loss_fn, eval_fn,
-                eval_metric_str, early_stopping_patience, regularization=0.0):
+                eval_metric_str, early_stopping_patience, save_ckpt=False, regularization=0.0):
     train_loader, val_loader, test_loader = data_loader['train'], data_loader['devel'], data_loader['test']
 
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=regularization)
@@ -76,7 +77,7 @@ def train_model(task, model, data_loader, epochs, lr, model_path, identifier, us
             early_stop = 0
             best_val_score = val_score
             best_val_loss = val_loss
-            best_model_file = save_model(model, model_path, identifier)
+            best_model_file = save_model(model, model_path, identifier, save_ckpt=save_ckpt)
             print(f'Best model saved to file: {best_model_file}')
 
         else:
