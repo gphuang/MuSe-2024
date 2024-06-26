@@ -400,8 +400,9 @@ class IafModel(nn.Module):
         """
         super(IafModel, self).__init__()
         
+        #TBD: it lt ia
         fusion='ia'
-        num_heads=1
+        num_heads=params.n_attn_head
 
         input_dims=params.d_in 
         output_dim=params.n_targets
