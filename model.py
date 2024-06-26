@@ -458,7 +458,7 @@ class IafModel(nn.Module):
         audio_h = self.audio_subnet(audio_x)
         video_h = self.video_subnet(video_x)
         text_h = self.text_subnet(text_x)
-        #print(audio_h.shape, video_h.shape, text_h.shape) # (4, bs, 300)  
+        #print(audio_h.shape, video_h.shape, text_h.shape) # (seq_len'=4, bs, feat_dim'300)  
 
         audio_p = audio_h.permute(1,0,2)
         video_p = video_h.permute(1,0,2)
