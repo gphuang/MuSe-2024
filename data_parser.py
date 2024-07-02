@@ -99,8 +99,7 @@ def load_humor_subject(feature, subject_id, normalizer) -> Tuple[List[np.ndarray
     feature_path = PATH_TO_FEATURES[HUMOR]
 
     feature_files = sorted(glob(os.path.join(feature_path, feature, subject_id + '/*.csv')))
-    assert len(
-        feature_files) > 0, f'Error: no available "{feature}" feature files for coach "{subject_id}": "{feature_files}".'
+    assert len(feature_files) > 0, f'Error: no available "{feature}" feature files for coach "{subject_id}": "{feature_files}".'
     feature_df = pd.concat([pd.read_csv(feature_file) for feature_file in feature_files])
     if not (normalizer is None):
         feature_values = feature_df.iloc[:, feature_idx:].values

@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH --time=23:59:59
+#SBATCH --partition=gpu-h100-80g 
+#SBATCH --gpus=1
 #SBATCH --mem=250G
-#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=6
 #SBATCH --output=logs/%A.out
 #SBATCH --job-name=muse
@@ -31,7 +32,8 @@ dropouts=(0.4)
 batch_size=32
 
 # adapt
-csv='results/csvs/perception_avt.csv'
+csv='results/csvs/perception.csv'
+
 for model_type in "${model_types[@]}"; do
     for feature in "${features[@]}"; do
         for num_rnn_layers in "${nums_rnn_layers[@]}"; do

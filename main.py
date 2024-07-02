@@ -199,7 +199,7 @@ def main(args):
                                                                regularization=args.regularization,
                                                                early_stopping_patience=args.early_stopping_patience)
             
-            if False: # args.predict:  # run evaluation only if test labels are available. not valid for dev period
+            if args.save_ckpt and args.eval_model: # and args.predict:  # run evaluation only if test labels are available. not valid for dev period
                 model = torch.load(best_model_file) # restore best model encountered during training
                 test_loss, test_score = evaluate(args.task, model, data_loader['test'], loss_fn=loss_fn,
                                                  eval_fn=eval_fn, use_gpu=args.use_gpu)
@@ -245,12 +245,12 @@ def main(args):
                                   use_gpu=args.use_gpu)
         print(f'Evaluating {model_file}:')
         print(f'[Val {eval_str}]: {valid_score:7.4f}')
-        if False: # args.predict:
+        if args.save_ckpt and args.eval_model:
             _, test_score = evaluate(args.task, model, data_loader['test'], loss_fn=loss_fn, eval_fn=eval_fn,
                                      use_gpu=args.use_gpu)
             print(f'[Test {eval_str}]: {test_score:7.4f}')
 
-    if args.predict and args.save_ckpt :  # Make predictions for the test partition; this option is set if there are no test labels
+    if args.save_ckpt and args.predict:  # Make predictions for the test partition; this option is set if there are no test labels
         print('Predicting devel and test samples...')
         print(f'Predition path: {args.paths['predict']}')
         best_model = torch.load(model_file, map_location=config.device)

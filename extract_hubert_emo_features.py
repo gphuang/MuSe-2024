@@ -6,9 +6,12 @@ import numpy as np
 import pandas as pd
 import pathlib
 from pathlib import Path
+import glob
+import librosa
+from scipy.io import wavfile
+
 import torch
 import torch.nn as nn
-import librosa
 import datasets
 from datasets import load_dataset
 from transformers import HubertForSequenceClassification, Wav2Vec2FeatureExtractor
@@ -50,9 +53,14 @@ if 0:
     sys.exit(0)
 
 # configs
-model = HubertForSequenceClassification.from_pretrained("superb/hubert-large-superb-er")
-feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-large-superb-er")
-audio_data = '/scratch/elec/puhe/c/muse_2024/c1_muse_perception/raw/wav'
+task='c2_muse_humor'#'c1_muse_perception'#
+if task=='c1_muse_perception': 
+    audio_data=f'/scratch/elec/puhe/c/muse_2024/{task}/raw/wav'
+elif task=='c2_muse_humor':
+    audio_data=f'/scratch/elec/puhe/c/muse_2024/{task}/raw_data/audio'
+feat_dir=f'/scratch/elec/puhe/c/muse_2024/{task}/feature_segments'
+model=HubertForSequenceClassification.from_pretrained("superb/hubert-large-superb-er")
+feature_extractor=Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-large-superb-er")
 
 # hubert-superb-er demo
 def map_to_array(example):
@@ -96,33 +104,41 @@ if 0:
 
 from os import listdir
 from os.path import isfile, join
-onlyfiles = [f for f in listdir(audio_data) if isfile(join(audio_data, f))]
+
+if task=='c1_muse_perception':  
+    onlyfiles = glob.glob(f'{audio_data}/*.wav',  recursive = True)
+else:
+    onlyfiles = glob.glob(f'{audio_data}/*/*/*.wav',  recursive = True)
+onlyfiles = [f for f in onlyfiles if isfile(f)]
+overwrite = False
 for _file in onlyfiles:
-    spkr_id = Path(_file).stem
-    print(f'Spkr: {spkr_id}')
-    input_fname = os.path.join(audio_data, str(spkr_id) + '.wav')
-    input_audio, sample_rate = librosa.load(input_fname,  sr=16000)
+    # tqdm bar 
+    if task=='c1_muse_perception':   
+        out_dir = os.path.join(feat_dir, 'hubert-superb')
+    else:
+        spkr_id=Path(_file).parts[-2]
+        out_dir = os.path.join(feat_dir, 'hubert-superb', spkr_id)
+    out_fname = os.path.join(out_dir, Path(_file).stem + '.csv')
+    if overwrite or not os.path.exists(out_fname):
+        pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True) 
+        input_audio, sample_rate = librosa.load(_file,  sr=16000) # numpy 1.x 2.x incompatibility? 
+        #sample_rate, input_audio = wavfile.read(_file)
 
-    # segment audio with win_len=2000ms, hop_len=500ms, audio_len=30s
-    audio_arrays = rolling_window(input_audio, window=int(2*16000), step=int(0.5*16000))
-    audio_lens =[_array.shape for _array in audio_arrays]
-
-    # extract features from layers
-    inputs = feature_extractor(audio_arrays, sampling_rate=16000, padding=True, return_tensors="pt")
-    outputs = model(**inputs) # odict_keys(['logits', 'hidden_states'])
-    logits = outputs.logits # torch.Size([57, 4])
-    _states = outputs.hidden_states  # tuple, size=25, 
-    last_hidden_state = outputs.hidden_states[-1] # torch.Size([56, 99, 1024])
-    print(model, last_hidden_state.shape)
-    # averaging rep. in final layer
-    activations = torch.mean(last_hidden_state, 1)
-
-    # save features (logits_emo4, h_states512, h_states1024) for each audio file hubert-superb-er
-    feat_dir = '/scratch/elec/puhe/c/muse_2024/c1_muse_perception/feature_segments' 
-    
-    out_dir = os.path.join(feat_dir, 'hubert-superb')
-    out_fname = os.path.join(out_dir, str(spkr_id) + '.csv')
-    pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True) 
-    t_np = activations.detach().numpy()  
-    df = pd.DataFrame(t_np) 
-    df.to_csv(out_fname, index=False)
+        # segment audio with win_len=2000ms, hop_len=500ms, audio_len=30s
+        audio_arrays = rolling_window(input_audio, window=int(2*sample_rate), step=int(0.5*sample_rate))
+        audio_lens =[_array.shape for _array in audio_arrays]
+        
+        # extract features from layers
+        assert sample_rate==16000
+        inputs = feature_extractor(audio_arrays, sampling_rate=16000, padding=True, return_tensors="pt")
+        outputs = model(**inputs) # odict_keys(['logits', 'hidden_states'])
+        logits = outputs.logits # torch.Size([57, 4])
+        _states = outputs.hidden_states  # tuple, size=25, 
+        last_hidden_state = outputs.hidden_states[-1] # torch.Size([56, 99, 1024])
+        print(model, last_hidden_state.shape)
+        # averaging rep. in final layer
+        activations = torch.mean(last_hidden_state, 1)
+        t_np = activations.detach().numpy()  
+        # save features (logits_emo4, h_states512, h_states1024) for each audio file hubert-superb-er
+        df = pd.DataFrame(t_np) 
+        df.to_csv(out_fname, index=False)
