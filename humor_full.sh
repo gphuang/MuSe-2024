@@ -13,18 +13,18 @@ module load mamba
 source activate muse
 
 model_types=('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn')
-features=('egemaps' 'hubert-superb' ) #('faus' 'facenet512' 'vit-fer' 'bert-multilingual' 'w2v-msp' 'ds') #
+features=('hubert-superb') #('faus' 'facenet512' 'vit-fer' 'bert-multilingual' 'w2v-msp' 'ds' 'egemaps' ) #
 
 # RNN
 nums_rnn_layers=(1 2)
 model_dims=(64 128)
 
 # GENERAL
-lrs=(0.001 0.0005)
+lrs=(0.01 0.005 0.0005)
 patience=10
 n_seeds=5
 dropouts=(0.4)
-batch_size=32
+batch_size=16
 early_stopping_patience=3
 
 # adapt

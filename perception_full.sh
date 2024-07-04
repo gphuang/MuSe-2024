@@ -12,13 +12,13 @@ module load mamba
 
 source activate muse
 
-model_types=('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') #('rnn' 'cnn-attn')  # 
+model_types=('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') # ('rnn' 'cnn')  # 
 labels=('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured') #('aggressive') # 
-features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps' 'ds')
+features=('vit-fer') # ('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps' 'ds') #
 audio_features=('w2v-msp' 'egemaps --normalize' 'ds' 'hubert-superb') #('w2v-msp' 'egemaps') # 
 video_features=('faus' 'facenet512' 'vit-fer') #('vit-fer') # 
 text_features=('bert-base-uncased' 'bert-base-multilingual-cased' 'roberta-base' 'xlm-roberta-large' 'gpt2') #('bert-base-uncased') # 
-av_features=('avhubert-base-lrs3-iter5') # ('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h')
+av_features=('avhubert-base-lrs3-iter5' 'avhubert-large-lrs3-iter5' 'avhubert-base-vox-iter5' 'avhubert-large-vox-iter5' 'avhubert-base-noise-pt-noise-ft-30h' 'avhubert-large-noise-pt-noise-ft-30h') #('avhubert-base-lrs3-iter5') # 
 
 # RNN
 nums_rnn_layers=(2)
@@ -41,7 +41,7 @@ for model_type in "${model_types[@]}"; do
                 for lr in "${lrs[@]}";do
                     for dropout in "${dropouts[@]}";do
                         for label in "${labels[@]}"; do
-                            python3 main.py --task perception --feature "$feature" --batch_size $batch_size --model_type $model_type --model_dim $model_dim --label_dim "$label" --rnn_bi --rnn_n_layers $num_rnn_layers --lr "$lr" --n_seeds "$n_seeds" --result_csv "$csv" --linear_dropout $dropout --rnn_dropout $dropout --early_stopping_patience 10
+                            python3 main.py --task perception --feature "$feature" --batch_size $batch_size --model_type $model_type --model_dim $model_dim --label_dim "$label" --rnn_bi --rnn_n_layers $num_rnn_layers --lr "$lr" --n_seeds "$n_seeds" --linear_dropout $dropout --rnn_dropout $dropout --early_stopping_patience 10  --save_ckpt --predict # --result_csv "$csv" 
                         done
                         done
                     done

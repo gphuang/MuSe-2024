@@ -215,7 +215,7 @@ def main(args):
 
         best_idx = val_scores.index(max(val_scores))  # find best performing seed
         _val_score = f'{val_scores[best_idx]:7.4f}'
-        _test_score = f'{test_scores[best_idx]:7.4f}' #  if args.predict else 'nan'
+        _test_score = f'{test_scores[best_idx]:7.4f}' 
 
         print('=' * 50)
         print(f'Best {eval_str} on [Val] for seed {seeds[best_idx]}: '
