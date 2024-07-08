@@ -65,7 +65,8 @@ if 0:
     sys.exit(0)
 
 # configs
-task=sys.argv[1] #'c2_muse_humor'#'c1_muse_perception'#
+task=sys.argv[1] #'c2_muse_humor' 'c1_muse_perception'#
+feature_type=sys.argv[2] #'hubert-superb' 'hubert-er'
 
 if task=='c1_muse_perception': 
     audio_data=f'/scratch/elec/puhe/c/muse_2024/{task}/raw/wav'
@@ -116,7 +117,7 @@ if 0:
     print(audio_lens)
 
 # whether to regnerate feature files
-overwrite = True
+overwrite = False
 
 if task=='c1_muse_perception':  
     onlyfiles = glob.glob(f'{audio_data}/*.wav',  recursive = True)
@@ -126,14 +127,15 @@ onlyfiles = [f for f in onlyfiles if os.path.isfile(f)]
 for _file in tqdm(onlyfiles):
     # tqdm bar 
     if task=='c1_muse_perception':   
-        out_dir = os.path.join(feat_dir, 'hubert-superb')
+        out_dir = os.path.join(feat_dir, feature_type)
         id_header = 'subj_id'
     else:
-        out_dir = os.path.join(feat_dir, 'hubert-superb', Path(_file).parts[-3])
+        out_dir = os.path.join(feat_dir, feature_type, Path(_file).parts[-3])
         id_header = 'segment_id'
     f_id = Path(_file).stem
     out_fname = os.path.join(out_dir, f_id + '.csv')
     if overwrite or not os.path.exists(out_fname):
+        print('Extract feature', f_id)
         pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True) 
         input_audio, sample_rate = librosa.load(_file,  sr=16000) # numpy 1.x 2.x incompatibility? 
         #sample_rate, input_audio = wavfile.read(_file)
@@ -151,13 +153,16 @@ for _file in tqdm(onlyfiles):
         last_hidden_state = outputs.hidden_states[-1] # torch.Size([56, 99, 1024])
         # averaging rep. in final layer
         activations = torch.mean(last_hidden_state, 1)
-        t_np = activations.detach().numpy()  
-        # save features (logits_emo4, h_states512, h_states1024) for each audio file hubert-superb-er
+        if feature_type=='hubert-er':
+            t_np = logits.detach().numpy()    
+        else:
+            t_np = activations.detach().numpy()   
+        # save features (logits_emo4), (h_states1024) for each audio file hubert-superb-er
         df = pd.DataFrame(t_np) 
-        columns = ['feat_' + str(i)  for i in range(t_np.shape[1])]
+        columns = ['feat_' + str(i) for i in range(t_np.shape[1])]
         df = pd.DataFrame(t_np, columns=columns) 
         # add header column. !Perception data_parser did not throw exception!
-        df['timestamp'] = [str(i*500)  for i in range(t_np.shape[0])]
+        df['timestamp'] = [str(i*500) for i in range(t_np.shape[0])]
         df[id_header] = f_id
         df = df[['timestamp', id_header] + [ col for col in df.columns if col not in ['timestamp', id_header] ] ]
         df.to_csv(out_fname, index=False)

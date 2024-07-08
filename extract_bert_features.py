@@ -41,10 +41,10 @@ for checkpoint in checkpoints:
             pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True) 
             t_np = feature.detach().numpy()
             df = pd.DataFrame(t_np) 
-            columns = ['feat_' + str(i)  for i in range(t_np.shape[1])]
+            columns = ['feat_' + str(i) for i in range(t_np.shape[1])]
             df = pd.DataFrame(t_np, columns=columns) 
             # add header column. !Perception data_parser did not throw exception!
-            df['timestamp'] = [str(i)  for i in range(t_np.shape[0])]
+            df['timestamp'] = [str(i*500) for i in range(t_np.shape[0])]
             df['subj_id'] = spkr_id
             df = df[ ['timestamp' , 'subj_id'] + [ col for col in df.columns if col not in ['timestamp' , 'subj_id'] ] ]
             df.to_csv(out_fname, index=False)
