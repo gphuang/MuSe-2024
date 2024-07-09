@@ -12,15 +12,15 @@ module load mamba
 
 source activate muse
 
-model_types=('cnn' 'crnn' 'cnn-attn' 'crnn-attn') # 'rnn' 
-features=('w2v-msp' 'ds' 'egemaps' 'faus' 'facenet512' 'vit-fer' 'bert-multilingual' 'hubert-superb' 'hubert-er' ) #
+model_types=('rnn') 
+features=('faus' 'facenet512') #('w2v-msp' 'ds' 'egemaps' 'faus' 'facenet512' 'vit-fer' 'bert-multilingual' 'hubert-superb' 'hubert-er' ) #
 
 # RNN
 nums_rnn_layers=(2) #(1 2)
 model_dims=(256)
 
 # GENERAL
-lrs=(0.01 0.005 0.0005) #(0.0005) #
+lrs=(0.0005) #(0.01 0.005 0.0005) #
 patience=10
 n_seeds=5
 dropouts=(0.4)
@@ -36,7 +36,7 @@ for model_type in "${model_types[@]}"; do
             for model_dim in "${model_dims[@]}"; do
                 for lr in "${lrs[@]}";do
                     for dropout in "${dropouts[@]}";do
-                        python3 main.py --task humor --feature "$feature" --batch_size $batch_size --model_type $model_type --model_dim $model_dim --rnn_bi --rnn_n_layers $num_rnn_layers --lr "$lr" --n_seeds "$n_seeds" --result_csv "$csv" --linear_dropout $dropout --rnn_dropout $dropout --early_stopping_patience $early_stopping_patience
+                        python3 main.py --task humor --feature "$feature" --batch_size $batch_size --model_type $model_type --model_dim $model_dim --rnn_bi --rnn_n_layers $num_rnn_layers --lr "$lr" --n_seeds "$n_seeds" --linear_dropout $dropout --rnn_dropout $dropout --early_stopping_patience $early_stopping_patience --save_ckpt --predict # --result_csv "$csv" 
                     done
                     done
                 done

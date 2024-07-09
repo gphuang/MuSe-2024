@@ -40,6 +40,8 @@ def parse_args():
                         help='Specify the number of hidden neurons in the output layer (default: 64).')
     parser.add_argument('--rnn_dropout', type=float, default=0.2)
     parser.add_argument('--linear_dropout', type=float, default=0.5)
+    parser.add_argument('--kernel_size', type=int, default=3, 
+                        help='Specify the kernel_size for conv1d_block (default: 3).')
     parser.add_argument('--n_attn_head', type=int, default=1, 
                         help='Specify the number of heads for attention (default: 1).')
     parser.add_argument('--epochs', type=int, default=100,
@@ -191,18 +193,16 @@ def main(args):
                                                                args.lr, 
                                                                args.paths['model'], 
                                                                seed, 
-                                                               save_ckpt=args.save_ckpt,
-                                                               use_gpu=args.use_gpu,
                                                                loss_fn=loss_fn, 
                                                                eval_fn=eval_fn,
                                                                eval_metric_str=eval_str,
                                                                regularization=args.regularization,
                                                                early_stopping_patience=args.early_stopping_patience)
             
-            if args.save_ckpt and args.eval_model: # and args.predict:  # run evaluation only if test labels are available. not valid for dev period
-                model = torch.load(best_model_file) # restore best model encountered during training
+            model = torch.load(best_model_file) # restore best model encountered during training
+            if args.eval_model:  # run evaluation only if test labels are available.
                 test_loss, test_score = evaluate(args.task, model, data_loader['test'], loss_fn=loss_fn,
-                                                 eval_fn=eval_fn, use_gpu=args.use_gpu)
+                                                 eval_fn=eval_fn)
             else:
                 test_loss, test_score = float(0.0), float(0.0)
             test_scores.append(test_score)
@@ -225,7 +225,7 @@ def main(args):
 
         model_file = best_model_files[best_idx]  # best model of all of the seeds
         if not args.result_csv is None:
-            log_results(args.result_csv, params=args, seeds = list(seeds), metric_name=eval_str,
+            log_results(args.result_csv, params=args, seeds=list(seeds), metric_name=eval_str,
                         model_files=best_model_files, test_results=test_scores, val_results=val_scores,
                         best_idx=best_idx)
 
@@ -241,26 +241,33 @@ def main(args):
                                                                  num_workers=4,
                                                                  worker_init_fn=seed_worker,
                                                                  collate_fn=collate_fn)
-        _, valid_score = evaluate(args.task, model, data_loader['devel'], loss_fn=loss_fn, eval_fn=eval_fn,
-                                  use_gpu=args.use_gpu)
+        _, valid_score = evaluate(args.task, model, data_loader['devel'], loss_fn=loss_fn, eval_fn=eval_fn)
         print(f'Evaluating {model_file}:')
         print(f'[Val {eval_str}]: {valid_score:7.4f}')
-        if args.save_ckpt and args.eval_model:
+        if args.eval_model:
             _, test_score = evaluate(args.task, model, data_loader['test'], loss_fn=loss_fn, eval_fn=eval_fn,
-                                     use_gpu=args.use_gpu)
+                                     )
             print(f'[Test {eval_str}]: {test_score:7.4f}')
 
-    if args.save_ckpt and args.predict:  # Make predictions for the test partition; this option is set if there are no test labels
+    if args.predict:  # Make predictions for the test partition; this option is set if there are no test labels
         print('Predicting devel and test samples...')
         print(f'Predition path: {args.paths['predict']}')
         best_model = torch.load(model_file, map_location=config.device)
+        _, valid_score = evaluate(args.task, best_model, data_loader['devel'], loss_fn=loss_fn, eval_fn=eval_fn)
+        print(f'Evaluating {model_file}:')
+        print(f'[Val {eval_str}]: {valid_score:7.4f}')
         evaluate(args.task, best_model, data_loader['devel'], loss_fn=loss_fn, eval_fn=eval_fn,
-                 use_gpu=args.use_gpu, predict=True, prediction_path=args.paths['predict'],
+                 predict=True, prediction_path=args.paths['predict'],
                  filename='predictions_devel.csv')
         evaluate(args.task, best_model, data_loader['test'], loss_fn=loss_fn, eval_fn=eval_fn,
-                 use_gpu=args.use_gpu, predict=True, prediction_path=args.paths['predict'], 
+                 predict=True, prediction_path=args.paths['predict'], 
                  filename='predictions_test.csv')
-        print(f'Find predictions in {os.path.join(args.paths["predict"])}')
+        print(f'Predictions saved in {os.path.join(args.paths["predict"])}')
+
+    if not args.save_ckpt:
+        for _file in best_model_files:
+            os.remove(_file)
+            # print(f'Remove ckpt {_file}. (Disk quota)') 
 
     print('Done.')
 

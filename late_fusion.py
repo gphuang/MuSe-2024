@@ -30,8 +30,8 @@ def parse_args():
         assert len(args.model_ids) == len(args.seeds)
 
     if args.task == HUMOR:
-        args.prediction_dirs = [os.path.join(PREDICTION_FOLDER, args.task, args.model_ids[i], args.seeds[i]) for i in
-                                range(len(args.model_ids))]
+        args.prediction_dirs = [os.path.join(PREDICTION_FOLDER, args.task, args.model_ids[i]) for i in
+                                range(len(args.model_ids))] # , args.seeds[i] # gp: pred is from best seed, main.py does not save seed number in log dir
     elif args.task == PERCEPTION:
         args.prediction_dirs = [os.path.join(PREDICTION_FOLDER, args.task, args.label_dim, args.model_ids[i], args.seeds[i]) for i in
                                 range(len(args.model_ids))]

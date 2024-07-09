@@ -44,7 +44,7 @@ class Attention(nn.Module):
         x = self.proj_drop(x)
         return x, self.qkmatrix
 
-def conv1d_block(in_channels, out_channels, kernel_size=3, stride=1, padding='same'):
+def conv1d_block(in_channels, out_channels, kernel_size=1, stride=1, padding='same'):
     return nn.Sequential(nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size,stride=stride, padding='valid'),nn.BatchNorm1d(out_channels),
                                    nn.ReLU(inplace=True), nn.MaxPool1d(2,1))
 
@@ -168,12 +168,13 @@ class CnnModel(nn.Module):
 
         self.params = params
         input_channels=params.d_in # feat_size
+        kernel_size=params.kernel_size
         num_classes=params.n_targets
 
-        self.conv1d_0 = conv1d_block(input_channels, 64)
-        self.conv1d_1 = conv1d_block(64, 128)
-        self.conv1d_2 = conv1d_block(128, 256)
-        self.conv1d_3 = conv1d_block(256, 128)
+        self.conv1d_0 = conv1d_block(input_channels, 64, kernel_size=kernel_size)
+        self.conv1d_1 = conv1d_block(64, 128, kernel_size=kernel_size)
+        self.conv1d_2 = conv1d_block(128, 256, kernel_size=kernel_size)
+        self.conv1d_3 = conv1d_block(256, 128, kernel_size=kernel_size)
         self.out = OutLayer(128, params.d_fc_out, params.n_targets, dropout=params.linear_dropout)
         self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
             
@@ -202,9 +203,10 @@ class AttnCnnModel(nn.Module):
         self.params = params
         input_channels=params.d_in 
         num_classes=params.n_targets
+        kernel_size=params.kernel_size
 
         self.attention = Attention(in_dim_k=input_channels, in_dim_q=input_channels, out_dim=256)
-        self.conv1d = conv1d_block(256, 128)
+        self.conv1d = conv1d_block(256, 128, kernel_size=kernel_size)
         self.out = OutLayer(128, params.d_fc_out, params.n_targets, dropout=params.linear_dropout)
         self.final_activation = ACTIVATION_FUNCTIONS[params.task]()
             
@@ -238,11 +240,12 @@ class CrnnModel(nn.Module):
 
         self.params = params
         input_channels=params.d_in # feat_size
+        kernel_size=params.kernel_size
 
-        self.conv1d_0 = conv1d_block(input_channels, 64)
-        self.conv1d_1 = conv1d_block(64, 128)
-        self.conv1d_2 = conv1d_block(128, 256)
-        self.conv1d_3 = conv1d_block(256, 128)
+        self.conv1d_0 = conv1d_block(input_channels, 64, kernel_size=kernel_size)
+        self.conv1d_1 = conv1d_block(64, 128, kernel_size=kernel_size)
+        self.conv1d_2 = conv1d_block(128, 256, kernel_size=kernel_size)
+        self.conv1d_3 = conv1d_block(256, 128, kernel_size=kernel_size)
 
         self.inp = nn.Linear(128, params.model_dim, bias=False)
 
@@ -287,11 +290,12 @@ class CnnAttnModel(nn.Module):
         self.params = params
         input_channels=params.d_in 
         num_classes=params.n_targets
+        kernel_size=params.kernel_size
 
-        self.conv1d_0 = conv1d_block(input_channels, 64)
-        self.conv1d_1 = conv1d_block(64, 128)
-        self.conv1d_2 = conv1d_block(128, 256)
-        self.conv1d_3 = conv1d_block(256, 128)
+        self.conv1d_0 = conv1d_block(input_channels, 64, kernel_size=kernel_size)
+        self.conv1d_1 = conv1d_block(64, 128, kernel_size=kernel_size)
+        self.conv1d_2 = conv1d_block(128, 256, kernel_size=kernel_size)
+        self.conv1d_3 = conv1d_block(256, 128, kernel_size=kernel_size)
         
         self.attention = Attention(in_dim_k=128, in_dim_q=128, out_dim=128)
         self.out = OutLayer(128, params.d_fc_out, params.n_targets, dropout=params.linear_dropout)        
@@ -332,12 +336,13 @@ class CrnnAttnModel(nn.Module):
         super(CrnnAttnModel, self).__init__()
 
         self.params = params
-        input_channels=params.d_in 
+        input_channels=params.d_in
+        kernel_size=params.kernel_size
 
-        self.conv1d_0 = conv1d_block(input_channels, 64)
-        self.conv1d_1 = conv1d_block(64, 128)
-        self.conv1d_2 = conv1d_block(128, 256)
-        self.conv1d_3 = conv1d_block(256, 128)
+        self.conv1d_0 = conv1d_block(input_channels, 64, kernel_size=kernel_size)
+        self.conv1d_1 = conv1d_block(64, 128, kernel_size=kernel_size)
+        self.conv1d_2 = conv1d_block(128, 256, kernel_size=kernel_size)
+        self.conv1d_3 = conv1d_block(256, 128, kernel_size=kernel_size)
         
         self.attention = Attention(in_dim_k=128, in_dim_q=128, out_dim=128)
 

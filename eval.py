@@ -97,7 +97,7 @@ def get_predictions(model, task, data_loader, use_gpu=False):
     return full_labels, full_preds
 
 
-def evaluate(task, model, data_loader, loss_fn, eval_fn, use_gpu=False, predict=False, prediction_path=None,
+def evaluate(task, model, data_loader, loss_fn, eval_fn, predict=False, prediction_path=None,
              filename=None):
     losses, sizes = 0, 0
     full_preds = []
