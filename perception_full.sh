@@ -11,9 +11,9 @@ module load mamba
 
 source activate muse
 
-model_types=('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') #('crnn-attn')  #
+model_types=('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') #('crnn-attn')  #('rnn') #
 labels=('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured') #('aggressive') # 
-features=('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps' 'ds') #('vit-fer') #
+features=('vit-fer') #('ds') #('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps' 'ds') #
 audio_features=('w2v-msp' 'egemaps' 'ds' 'hubert-superb') #('w2v-msp' 'egemaps') # 
 video_features=('faus' 'facenet512' 'vit-fer') #('vit-fer') # 
 text_features=('bert-base-uncased' 'bert-base-multilingual-cased' 'roberta-base' 'xlm-roberta-large' 'gpt2') #('bert-base-uncased') # 
@@ -40,7 +40,7 @@ for model_type in "${model_types[@]}"; do
                 for lr in "${lrs[@]}";do
                     for dropout in "${dropouts[@]}";do
                         for label in "${labels[@]}"; do
-                            python3 main.py --task perception --feature "$feature" --batch_size $batch_size --model_type $model_type --model_dim $model_dim --label_dim "$label" --rnn_bi --rnn_n_layers $num_rnn_layers --lr "$lr" --n_seeds "$n_seeds" --linear_dropout $dropout --rnn_dropout $dropout --early_stopping_patience 10 --predict # --result_csv "$csv" # --save_ckpt #
+                            python3 main.py --task perception --combine_train_dev --feature "$feature" --batch_size $batch_size --model_type $model_type --model_dim $model_dim --label_dim "$label" --rnn_bi --rnn_n_layers $num_rnn_layers --lr "$lr" --n_seeds "$n_seeds" --linear_dropout $dropout --rnn_dropout $dropout --early_stopping_patience 10 --predict # --result_csv "$csv" # --save_ckpt #
                         done
                         done
                     done

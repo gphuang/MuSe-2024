@@ -21,6 +21,10 @@ def calc_pearsons(preds, labels):
 
 
 def mean_pearsons(preds, labels):
+    """
+    preds: shape (t, label_dims) e.g. (t, 16)
+    labels: shape (t, label_dims) e.g. (t, 16)
+    """
     preds = np.row_stack([np.array(p) for p in preds])
     labels = np.row_stack([np.array(l) for l in labels])
     num_classes = preds.shape[1]

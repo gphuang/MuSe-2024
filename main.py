@@ -12,7 +12,7 @@ from torch import nn
 import config
 from config import TASKS, PERCEPTION, HUMOR
 from data_parser import load_data
-from dataset import MultiModalMuSeDataset, MuSeDataset, custom_collate_fn, custom_mm_collate_fn
+from dataset import MultiModalMuSeDataset, MuSeDataset, custom_collate_fn
 from eval import evaluate, calc_auc, calc_pearsons
 from train import train_model
 from utils import Logger, seed_worker, log_results
@@ -57,8 +57,10 @@ def parse_args():
     parser.add_argument('--result_csv', default=None, help='Append the results to this csv (or create it, if it '
                                                            'does not exist yet). Incompatible with --predict')
     parser.add_argument('--early_stopping_patience', type=int, default=15, help='Patience for early stopping')
+    parser.add_argument('--regularization', type=float, required=False, default=0.0,
+                        help='L2-Penalty')
     parser.add_argument('--use_gpu', action='store_true',
-                        help='Specify whether to use gpu for training (default: False).')
+                        help='Specify whether to use gpu for training (default: False). (Deprecated. replaced with model.to_device)')
     parser.add_argument('--cache', action='store_true',
                         help='Specify whether to cache data as pickle file (default: False).')
     parser.add_argument('--save_ckpt', action='store_true',
@@ -66,8 +68,9 @@ def parse_args():
     parser.add_argument('--predict', action='store_true',
                         help='Specify when no test labels are available; test predictions will be saved '
                              '(default: False). Incompatible with result_csv')
-    parser.add_argument('--regularization', type=float, required=False, default=0.0,
-                        help='L2-Penalty')
+    parser.add_argument('--combine_train_dev', action='store_true',
+                        help='Specify whether to combine train and dev dataset (default: False).')
+    
     # evaluation only arguments
     parser.add_argument('--eval_model', type=str, default=None,
                         help='Specify model which is to be evaluated; no training with this option (default: False).')
@@ -75,9 +78,9 @@ def parse_args():
                         help='Specify seed to be evaluated; only considered when --eval_model is given.')
 
     args = parser.parse_args()
-    if not (args.result_csv is None) and args.predict:
-        print("--result_csv is not compatible with --predict")
-        sys.exit(-1)
+    #if not (args.result_csv is None) and args.predict:
+    #    print("--result_csv is not compatible with --predict")
+    #    sys.exit(-1)
     if args.eval_model:
         assert args.eval_seed
     return args
@@ -175,15 +178,27 @@ def main(args):
         for seed in seeds:
             torch.manual_seed(seed)
             data_loader = {}
+            
+            trainset = datasets['train']
+            devset = datasets['devel']
+            if args.combine_train_dev: 
+                # add dev to trainset, works for humor
+                # ERR with collate_fn for perception
+                datasets['train'] = torch.utils.data.ConcatDataset((trainset, devset))
+            
             for partition, dataset in datasets.items():  # one DataLoader for each partition
                 batch_size = args.batch_size if partition == 'train' else 2 * args.batch_size
-                shuffle = True if partition == 'train' else False  # shuffle only for train partition
+                shuffle = True if partition == 'train' else False  # shuffle only for train partition                
                 data_loader[partition] = torch.utils.data.DataLoader(dataset, 
                                                                      batch_size=batch_size, 
                                                                      shuffle=shuffle,
                                                                      num_workers=4,
                                                                      worker_init_fn=seed_worker,
                                                                      collate_fn=collate_fn)
+            
+            #print(len(trainset), len(devset))
+            #print(next(iter(data_loader['train'])))
+            #sys.exit(0)
             print('=' * 50)
             print(f'Training model... [seed {seed}] for at most {args.epochs} epochs')
             val_loss, val_score, best_model_file = train_model(args.task, 
@@ -277,10 +292,14 @@ if __name__ == '__main__':
     args = parse_args()
 
     # debug
-    print(f'args.feature: {args.feature}, id: {'_'.join(args.feature.replace(os.path.sep, "-").split())}')
+    # print(f'args.feature: {args.feature}, id: {'_'.join(args.feature.replace(os.path.sep, "-").split())}')
+    model_id=datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M")
+    if args.combine_train_dev:
+        model_id+='-combine-train-dev'
+    feat_type='+'.join(args.feature.replace(os.path.sep, "-").split())
     args.log_file_name =  '{}_{}_[{}]_[{}_{}]'.format(args.model_type.upper(), 
-                                                            datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M"), 
-                                                            '_'.join(args.feature.replace(os.path.sep, "-").split()),
+                                                            model_id, 
+                                                            feat_type,
                                                             args.lr,
                                                             args.batch_size)
 

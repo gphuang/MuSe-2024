@@ -14,9 +14,13 @@ def parse_args():
     parser.add_argument('--label_dim', choices=PERCEPTION_LABELS, required=False,
                         help=f'Specify the emotion dimension, only relevant for perception.')
     parser.add_argument('--model_ids', nargs='+', required=True, help='model ids')
-    parser.add_argument('--seeds', nargs='+', required=True, help=f'seeds')
+    parser.add_argument('--seeds', nargs='+', required=False, help=f'seeds')
     parser.add_argument('--result_csv', required=False, type=str)
-
+    parser.add_argument('--lf_dir', default='lf', help=f'Specify directory name where to save prediction files. Default: lf')
+    parser.add_argument('--submission_format', action='store_true',
+                        help=f'Specify whether to save predictions in submission format (default: False).')
+    
+    
     args = parser.parse_args()
     # TODO add again
     #assert len(set(args.model_ids)) == len(args.model_ids), "Error, duplicate model file"
@@ -33,15 +37,14 @@ def parse_args():
         args.prediction_dirs = [os.path.join(PREDICTION_FOLDER, args.task, args.model_ids[i]) for i in
                                 range(len(args.model_ids))] # , args.seeds[i] # gp: pred is from best seed, main.py does not save seed number in log dir
     elif args.task == PERCEPTION:
-        args.prediction_dirs = [os.path.join(PREDICTION_FOLDER, args.task, args.label_dim, args.model_ids[i], args.seeds[i]) for i in
-                                range(len(args.model_ids))]
+        args.prediction_dirs = [os.path.join(PREDICTION_FOLDER, args.task, args.label_dim, args.model_ids[i]) for i in
+                                range(len(args.model_ids))] # , args.seeds[i]
     if not args.result_csv is None:
         args.result_csv = os.path.join(LOG_FOLDER, 'lf_results', args.task if args.task==HUMOR else f'{args.task}/{args.label_dim}', args.result_csv)
         os.makedirs(os.path.dirname(args.result_csv), exist_ok=True)
         if not args.result_csv.endswith('.csv'):
             args.result_csv += '.csv'
     return args
-
 
 def create_humor_lf(df, weights=None):
     pred_arr = df[[c for c in df.columns if c.startswith('prediction_')]].values
@@ -138,8 +141,14 @@ if __name__ == '__main__':
         # save fusion predictions
         full_df['prediction'] = preds
         task_id = args.task if args.task != PERCEPTION else os.path.join(args.task, args.label_dim)
-        _filename = os.path.join(PREDICTION_FOLDER, task_id, 'lf', f'predictions_{partition}.csv')
+        _filename = os.path.join(PREDICTION_FOLDER, task_id, args.lf_dir, f'predictions_{partition}.csv')
         os.makedirs(os.path.dirname(_filename), exist_ok=True)
+        
+        # save in submission format
+        if args.submission_format:
+            full_df = full_df.loc[:, ~full_df.columns.str.startswith('prediction_')]
+            if partition == 'test':
+                full_df = full_df.drop(columns=['label'])
         full_df.to_csv(_filename, index=False)
         print(f'Predictions saved to {_filename}')
 
@@ -147,7 +156,7 @@ if __name__ == '__main__':
         df = pd.DataFrame({
             'models': [args.model_ids],
             'weights': [str(weights)],
-            'seeds': [args.seeds],
+            # 'seeds': [args.seeds],
             'devel': [ress[0]],
             'test': [ress[1]]
         })
