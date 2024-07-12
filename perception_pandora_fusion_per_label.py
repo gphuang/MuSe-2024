@@ -7,7 +7,7 @@ from config import PREDICTION_FOLDER
 label_dims = ('aggressive', 'confident', 'good_natured',) 
 label_dims += ('arrogant', 'assertiv',  'dominant', 'independent', 'risk', 'leader_like', 'collaborative', 'enthusiastic', 'friendly', 'kind', 'likeable', 'sincere',  'warm') 
 
-criteria=sys.argv[1]#'top_1'#'positive_pearsons'# 
+criteria=sys.argv[1]#'pseudo_fusion'#'top_1'#'positive_pearsons'# 
 fname='./results/csvs/table2_pred_perception.csv'
 df=pd.read_csv(fname)
 df=df.sort_values(['label_dim', 'mean_pearsons'], ascending=False)
@@ -84,18 +84,19 @@ for partition in ['devel', 'test']:
         df_pred=pd.read_csv(pred_fname, index_col=0)
         df_pred=df_pred.rename(columns={'prediction': _label})
         #print(df_pred.shape, df_pred.head(3))
-        # save to label dir, try to do late fusion
+        # save to label dir, to do late fusion, 'label' is kept for late_fusion.py
         csv_path=os.path.join(PREDICTION_FOLDER, 'perception', _label, criteria, f'predictions_{partition}.csv')
         csv_dir = pathlib.Path(csv_path).parent.resolve()
         os.makedirs(csv_dir, exist_ok=True)
         df_pred.to_csv(csv_path)
-        # save to perception dir
-        if partition =='devel':
-            df_pred=df_pred.rename(columns={'label': _label+'_label'})
-        else:
-            df_pred=df_pred.drop(columns=['label'])
+        # append to df and save to perception dir
+        #if 0 and partition =='devel': # keep label for sanity check
+        #    df_pred=df_pred.rename(columns={'label': _label+'_label'})
+        #else:
+        df_pred=df_pred.drop(columns=['label'])
         appended_preds.append(df_pred)
     df_out=pd.concat(appended_preds, axis=1)
+    df_out.index.names=['subject_id']
     #print(df_out.shape, df_out.head(3))
     #sys.exit(0)
 

@@ -1,4 +1,4 @@
-import os
+import os, sys
 from argparse import ArgumentParser
 import pandas as pd
 import numpy as np
@@ -111,7 +111,7 @@ if __name__ == '__main__':
         meta_df = dfs[0][meta_cols].copy()
 
         label_cols = [c for c in list(dfs[0].columns) if c.startswith('label')]
-        if args.task == PERCEPTION:
+        if args.task == PERCEPTION and partition=='devel':
             for label_col in label_cols:
                 assert all(np.all(df[label_col].values == dfs[0][label_col].values) for df in dfs)
         label_df = dfs[0][label_cols].copy()
