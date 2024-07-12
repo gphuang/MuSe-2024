@@ -5,6 +5,7 @@ import glob
 import pathlib
 from tqdm import tqdm
 
+sys.path.append("/scratch/work/huangg5/muse/MuSe-2024")
 from eval import calc_pearsons, mean_pearsons
 
 dir_results='/scratch/work/huangg5/muse/MuSe-2024/results/prediction_muse/'
@@ -30,7 +31,7 @@ _, partition_to_subject = get_data_partition(meta_fname)
 num_devel_spkrs=len(partition_to_subject['devel'])
 
 # walk in dir and collect latest pred.
-subset='*_*_*_*' #'RNN*ds*0.0005*' #'*' #  mpc: 0.143677 # except: fusion folder 'lf' 
+subset='*_*_*' #'RNN*ds*0.0005*' #'*' #  mpc: 0.143677 # except: fusion folder 'lf' 
 prediction_dir=os.path.join(dir_results, task)
 appended_data = []
 for _label in label_dims:
