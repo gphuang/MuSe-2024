@@ -11,8 +11,7 @@ criteria=sys.argv[1] #'top_1'# 'positive_pearsons' #
 fname='./results/csvs/table2_pred_perception.csv'
 df=pd.read_csv(fname)
 df=df.sort_values(['label_dim', 'mean_pearsons'], ascending=False)
-#print(df.shape, df.columns, df.head(3))
-
+print(df.shape, df.columns, df.head(3))
 
 for partition in ['devel', 'test']:
     appended_preds=[]
@@ -25,8 +24,8 @@ for partition in ['devel', 'test']:
             #_df=_df.loc[_df.mean_pearsons.idxmax()]
             _df=_df.iloc[k-1] # Series result # df.iloc[[1]]  # DataFrame result
             #print(_df.model_id, _df.shape, _df)
-            model_id=_df.model_id
-            pred_fname=os.path.join(PREDICTION_FOLDER, 'perception', _label, model_id, f'predictions_{partition}.csv')
+            log_name=_df.log_name
+            pred_fname=os.path.join(PREDICTION_FOLDER, 'perception', _label, log_name, f'predictions_{partition}.csv')
             df_pred=pd.read_csv(pred_fname, index_col=0)
             df_pred=df_pred.rename(columns={'prediction': _label})
             #print(df_pred.shape, df_pred.head(3))

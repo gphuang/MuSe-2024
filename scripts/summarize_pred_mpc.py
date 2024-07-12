@@ -30,7 +30,7 @@ _, partition_to_subject = get_data_partition(meta_fname)
 num_devel_spkrs=len(partition_to_subject['devel'])
 
 # walk in dir and collect latest pred.
-subset='*_*_*' #'RNN*ds*0.0005*' #'*' #  mpc: 0.143677 # except: fusion folder 'lf' 
+subset='*_*_*_*' #'RNN*ds*0.0005*' #'*' #  mpc: 0.143677 # except: fusion folder 'lf' 
 prediction_dir=os.path.join(dir_results, task)
 appended_data = []
 for _label in label_dims:
@@ -51,6 +51,7 @@ for _label in label_dims:
             df['label_dim']=_label
             df['model_id']=model_id
             df['date_id']=_date_id
+            df['log_name']=_logname
             appended_data.append(df)
         except:
             print(f'Problem with {_file}.')
@@ -75,19 +76,22 @@ for _model in uniq_models:
             if _model not in missing_ids:
                 missing_ids.append(_model)
         else:
-            date_id=_df.date_id.unique()[0]
-            assert len(_df.date_id.unique())==1
+            #date_id=_df.date_id.unique()[0]
+            #assert len(_df.date_id.unique())==1
+            log_name=_df.log_name.unique()[0]
+            assert len(_df.log_name.unique())==1
             # print(_label, df.date_id.unique())
-            _model_type=_model.split('_')[0]
-            _feat_types=_model.split('_')[1:-2]
-            _hyper_params=_model.split('_')[-2:]
-            _model_id = '_'.join([_model_type, date_id] + _feat_types + _hyper_params )
+            #_model_type=_model.split('_')[0]
+            #_feat_types=_model.split('_')[1:-2]
+            #_hyper_params=_model.split('_')[-2:]
+            #_log_name = '_'.join([_model_type, date_id] + _feat_types + _hyper_params )
             pred_array=_df.prediction
             label_array=_df.label
             mpc_per_label=calc_pearsons(pred_array.to_numpy(), label_array.to_numpy())
     
             # label-wise performance
-            dct = {'model_id': _model_id,
+            dct = {'log_name': log_name,
+                   'model_id':_model,
                     'label_dim': _label,
                     'mean_pearsons': mpc_per_label}
             appended_result.append(pd.DataFrame([dct]))

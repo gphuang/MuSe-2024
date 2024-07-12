@@ -147,8 +147,8 @@ if __name__ == '__main__':
         # save in submission format
         if args.submission_format:
             full_df = full_df.loc[:, ~full_df.columns.str.startswith('prediction_')]
-            if partition == 'test':
-                full_df = full_df.drop(columns=['label'])
+            # if partition == 'test':
+            full_df = full_df.drop(columns=['label'])
         full_df.to_csv(_filename, index=False)
         print(f'Predictions saved to {_filename}')
 
