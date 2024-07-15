@@ -18,25 +18,25 @@ df=df.sort_values(['label_dim', 'mean_pearsons'], ascending=False)
 df0=pd.read_csv(fname)
 df0=df0.sort_values(['mean_pearsons'], ascending=False)
 df1=df0.head(20)"""
-# 37 models top and rep of uni and multi-modal, for pseudo-fusion, as late_fusion.py not working for c1
+# models rep of uni and multi-modal, for pseudo-fusion, as late_fusion.py not working for c1
 _model_types=['CNN', 'CRNN', 'RNN', 'CNN-ATTN', 'CRNN-ATTN']
 _feat_types=['vit-fer', 'w2v-msp', 'hubert-superb']
 _hyper='0.0005_32'
 unimodals=[_model+'_['+_feat+']_['+_hyper+']' for _model in _model_types for _feat in _feat_types]
-print(len(unimodals))
+print(len(unimodals)) # 15
 
 _model_types=['LMF', 'IAF']
 _a_types=['w2v-msp', 'hubert-superb']
 _v_types=['vit-fer', ]
 _t_types=['bert-base-uncased', 'bert-base-multilingual-cased', 'roberta-base', 'xlm-roberta-large', 'gpt2']  
 _feat_types=[ _a+'_'+_v+'_'+_t for _a in _a_types for _v in _v_types for _t in _t_types ]
-_feat_types+=['vit-fer_vit-fer_vit-fer']
+#_feat_types+=['vit-fer_vit-fer_vit-fer']
 _hyper='0.0005_32'
 multimodals=[_model+'_['+_feat+']_['+_hyper+']' for _model in _model_types for _feat in _feat_types]
-print(len(multimodals))
+print(len(multimodals)) # 11
 
 top_models=unimodals+multimodals
-print(len(top_models))
+print(len(top_models)) # 25
 
 if 0:
     top_models=[
@@ -108,3 +108,4 @@ for partition in ['devel', 'test']:
     df_out.to_csv(csv_path)
     print(f'Prediction file written to {csv_path}.')
     
+# cp results/prediction_muse/perception/lf/*.csv results/submission/c1_perception

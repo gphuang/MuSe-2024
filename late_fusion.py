@@ -113,7 +113,9 @@ if __name__ == '__main__':
         label_cols = [c for c in list(dfs[0].columns) if c.startswith('label')]
         if args.task == PERCEPTION and partition=='devel':
             for label_col in label_cols:
-                assert all(np.all(df[label_col].values == dfs[0][label_col].values) for df in dfs)
+                #for df in dfs:
+                #    print((df[label_col].values, dfs[0][label_col].values))
+                assert all(np.all(df[label_col].values.round(4) == dfs[0][label_col].values.round(4)) for df in dfs)
         label_df = dfs[0][label_cols].copy()
 
         prediction_dfs = []

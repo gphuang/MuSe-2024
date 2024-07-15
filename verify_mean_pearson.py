@@ -7,9 +7,12 @@ from eval import mean_pearsons
 from data_parser import load_data
 from dataset import MultiModalMuSeDataset, MuSeDataset
 
-fname='./results/prediction_muse/perception/lf/predictions_devel.csv' # 0.5409033566745889
-fname='./results/prediction_muse/perception/top_1/predictions_devel.csv' # 0.5300840487431339
-fname='./results/prediction_muse/perception/pseudo_fusion/predictions_devel.csv' # 0.5073189186614222
+# 15.Jul.2024 without vit-vit-vit, and with
+fname='./results/prediction_muse/perception/lf/predictions_devel.csv' # 0.5429725331490107 # 0.5409033566745889
+#fname='./results/prediction_muse/perception/aed_dejan/predictions_devel.csv' # 0.2710262891342781
+#fname='./results/prediction_muse/perception/lf-gp-dejan/predictions_devel.csv' # 0.5472685244138151  
+#fname='./results/prediction_muse/perception/top_1/predictions_devel.csv' # 0.5326608133674763 # same
+#fname='./results/prediction_muse/perception/pseudo_fusion/predictions_devel.csv' # 0.5073189186614222 # same
 df_pred=pd.read_csv(fname, index_col=0)
 #print(df_pred.shape)
 

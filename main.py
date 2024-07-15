@@ -182,8 +182,8 @@ def main(args):
             trainset = datasets['train']
             devset = datasets['devel']
             if args.combine_train_dev: 
-                # add dev to trainset, works for humor
-                # ERR with collate_fn for perception
+                # add dev to trainset, works on humor
+                # ERR with collate_fn on perception
                 datasets['train'] = torch.utils.data.ConcatDataset((trainset, devset))
             
             for partition, dataset in datasets.items():  # one DataLoader for each partition

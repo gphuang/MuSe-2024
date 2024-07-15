@@ -24,7 +24,7 @@ for _label in label_dims[:]:
     _df = pd.DataFrame(data=labels,  
                     index=meta,  
                     columns=[_label])
-    _df.index.names=['subject_id']
+    _df.index.names=['subj_id']
     appended_data.append(_df)
 df_label=pd.concat(appended_data, axis=1)
 #print(df_label.shape, df_label.head(3))
