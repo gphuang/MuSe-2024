@@ -7,22 +7,14 @@ from tqdm import tqdm
 
 sys.path.append("/scratch/work/huangg5/muse/MuSe-2024")
 from eval import calc_pearsons, mean_pearsons
+from utils import write_to_csv
+from config_model_feat import label_dims, unimodals, multimodals
 
 dir_results='/scratch/work/huangg5/muse/MuSe-2024/results/prediction_muse/'
 task='perception'
 metric = 'best_val_Pearson'
-label_dims = ('aggressive', 'confident', 'good_natured',) 
-label_dims += ('arrogant', 'assertiv',  'dominant', 'independent', 'risk', 'leader_like', 'collaborative', 'enthusiastic', 'friendly', 'kind', 'likeable', 'sincere',  'warm') 
-
-if 0:
-    label_dim='aggressive/RNN_2024-07-03-14-49_[vit-fer]_[0.0005_32]'
-    f_name=os.path.join(dir_results, task, label_dim, 'predictions_devel.csv')
-    df=pd.read_csv(f_name, index_col=0)
-    print(df.shape, df.head(3))
-    preds=df['prediction'].to_numpy()
-    labels=df['label'].to_numpy()
-    print(preds.shape, labels.shape)
-    p = calc_pearsons(preds, labels)
+top_models=unimodals+multimodals
+print(len(top_models)) #25
 
 # devel meta ids
 from data_parser import get_data_partition
@@ -51,7 +43,7 @@ for _label in label_dims:
             df=pd.read_csv(_file)
             df['label_dim']=_label
             df['model_id']=model_id
-            df['date_id']=_date_id
+            #df['feat_id']=_feat_types
             df['log_name']=_logname
             appended_data.append(df)
         except:
@@ -59,12 +51,12 @@ for _label in label_dims:
 # deal with duplicates, keep latest
 df = pd.concat(appended_data)
 df = df.drop_duplicates(subset=['meta_col_0', 'model_id', 'label_dim'], keep='last')
-# df.to_csv('results/csvs/predictions_devel_0.4256.csv')
+#print(df.shape, df.columns, df.model_id.unique())
 
 # sanity check
-uniq_models=df['model_id'].unique()
-num_classes = len(label_dims)
-#print(len(uniq_models))
+uniq_models=df.model_id.unique() # top_models # 
+num_classes=len(label_dims)
+#print(len(uniq_models), uniq_models)
    
 ### Table 2. label-wise p
 appended_result=[]
@@ -72,20 +64,14 @@ missing_ids=[]
 for _model in uniq_models:
     for _label in label_dims:
         _df=df[(df.model_id==_model) & (df.label_dim==_label)]
+        #print(_model, _label, _df.shape, _df.head(3))
         # sanity check to have 58 speakers
         if not _df.shape[0] == num_devel_spkrs:
             if _model not in missing_ids:
                 missing_ids.append(_model)
         else:
-            #date_id=_df.date_id.unique()[0]
-            #assert len(_df.date_id.unique())==1
             log_name=_df.log_name.unique()[0]
             assert len(_df.log_name.unique())==1
-            # print(_label, df.date_id.unique())
-            #_model_type=_model.split('_')[0]
-            #_feat_types=_model.split('_')[1:-2]
-            #_hyper_params=_model.split('_')[-2:]
-            #_log_name = '_'.join([_model_type, date_id] + _feat_types + _hyper_params )
             pred_array=_df.prediction
             label_array=_df.label
             mpc_per_label=calc_pearsons(pred_array.to_numpy(), label_array.to_numpy())
@@ -93,8 +79,8 @@ for _model in uniq_models:
             # label-wise performance
             dct = {'log_name': log_name,
                    'model_id':_model,
-                    'label_dim': _label,
-                    'mean_pearsons': mpc_per_label}
+                   'label_dim': _label,
+                   'mean_pearsons': mpc_per_label}
             appended_result.append(pd.DataFrame([dct]))
     
 df_mpc=pd.concat(appended_result)
@@ -107,10 +93,7 @@ if 1 & len(missing_ids)>0:
 # write output
 if 1:
     csv_path='results/csvs/table2_pred_perception.csv'
-    csv_dir = pathlib.Path(csv_path).parent.resolve()
-    os.makedirs(csv_dir, exist_ok=True)
-
-    df_mpc.to_csv(csv_path, index=False)
+    write_to_csv(df_mpc, csv_path)
     
 ### Table 3. overall p
 appended_result=[]
@@ -157,10 +140,7 @@ if 1 & len(missing_ids)>0:
 # write output
 if 1:
     csv_path='results/csvs/table3_pred_perception.csv'
-    csv_dir = pathlib.Path(csv_path).parent.resolve()
-    os.makedirs(csv_dir, exist_ok=True)
-
-    df_mpc.to_csv(csv_path, index=False)
+    write_to_csv(df_mpc, csv_path)
 
 sys.exit(0)
 

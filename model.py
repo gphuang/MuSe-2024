@@ -434,9 +434,9 @@ class IafModel(nn.Module):
         self.post_fusion_prob = dropouts[3]
 
         # define the pre-fusion subnetworks
-        self.audio_subnet0 = SubNet(self.audio_in, self.audio_hidden, self.audio_out, num_layers=1, bidirectional=False, dropout=self.audio_prob)
-        self.video_subnet0 = SubNet(self.video_in, self.video_hidden, self.video_out, num_layers=1, bidirectional=False, dropout=self.video_prob)
-        self.text_subnet0 = SubNet(self.text_in, self.text_hidden, self.text_out, num_layers=1, bidirectional=False, dropout=self.text_prob)
+        #self.audio_subnet0 = SubNet(self.audio_in, self.audio_hidden, self.audio_out, num_layers=1, bidirectional=False, dropout=self.audio_prob)
+        #self.video_subnet0 = SubNet(self.video_in, self.video_hidden, self.video_out, num_layers=1, bidirectional=False, dropout=self.video_prob)
+        #self.text_subnet0 = SubNet(self.text_in, self.text_hidden, self.text_out, num_layers=1, bidirectional=False, dropout=self.text_prob)
 
         self.audio_subnet = SubNet(self.audio_in, self.audio_hidden, self.audio_out, num_layers=2, bidirectional=True, dropout=self.audio_prob)
         self.video_subnet = SubNet(self.video_in, self.video_hidden, self.video_out, num_layers=2, bidirectional=True, dropout=self.video_prob)

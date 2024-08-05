@@ -11,6 +11,8 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import cohen_kappa_score
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import confusion_matrix
+
+sys.path.append("/scratch/work/huangg5/muse/MuSe-2024")
 from eval import calc_auc
 
 dir_results='/scratch/work/huangg5/muse/MuSe-2024/results/prediction_muse/'

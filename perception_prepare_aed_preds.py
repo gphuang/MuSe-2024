@@ -4,19 +4,14 @@ import numpy as np
 import pathlib
 
 from config import PREDICTION_FOLDER
+from eval import calc_pearsons
+from utils import write_to_csv
 
 fname='results/prediction_muse/perception/lf/label_devel.csv'
 df_label=pd.read_csv(fname, index_col=0)
 label_dims=df_label.columns
 #print(df_label.shape, df_label.head(3))
 #sys.exit(0)
-
-def write_to_csv(df, csv_path):
-    csv_dir = pathlib.Path(csv_path).parent.resolve()
-    os.makedirs(csv_dir, exist_ok=True)
-
-    df.to_csv(csv_path)
-    print(f'Datafram written to {csv_path}.')
 
 # prepare label wise predictions
 """
@@ -36,6 +31,8 @@ test partition
 meta_col_0,prediction,label
 0,0.3390737771987915,
 """
+
+# Late fusion
 if 0:
     for _label in label_dims:
         for partition in ['test', 'devel']: #
@@ -63,29 +60,40 @@ if 0:
             # write output
             write_to_csv(_df, out_fname)
 
+    # sbatch run-late-fusion-perception-gp-dejan.sh
 
-# sbatch run-late-fusion-perception-gp-dejan.sh
+# pandora fusion
+criteria=sys.argv[1]#'pseudo_fusion'#'top_1'#'positive_pearsons'# 
+fname='./results/csvs/table2_pred_perception.csv' # script/summarize_pred_mpc.py
+df=pd.read_csv(fname)
+df=df.sort_values(['label_dim', 'mean_pearsons'], ascending=False)
+print(df.shape, df.columns, df.head(3))
 
-# combine lf labels into 1 csv submission file
-lf_dir='lf-gp-dajan'
-for partition in ['devel', 'test']:
-    appended_preds=[]
-    for _label in label_dims[:]:
-        pred_fname=os.path.join(PREDICTION_FOLDER, 'perception', _label, lf_dir, f'predictions_{partition}.csv')
-        df_pred=pd.read_csv(pred_fname, index_col=0)
-        #print(df_pred.shape, df_pred.head(2))
-        df_pred=df_pred.rename(columns={'prediction': _label})
-        appended_preds.append(df_pred)
-    df_out=pd.concat(appended_preds, axis=1)
-    df_out.index.names=['subj_id']
-    #print(df_out.shape, df_out.head(3))
+### add aed model to Table 2. label-wise p
+in_fname=f'results/prediction_muse/perception/aed_dejan/predictions_devel.csv'
+df_pred=pd.read_csv(in_fname, index_col=0)
 
-    # write output
-    csv_path=os.path.join(PREDICTION_FOLDER, 'perception', lf_dir, f'predictions_{partition}.csv')
-    write_to_csv(df_out, csv_path)
+appended_result=[]
+for _label in label_dims:
+    pred_array=df_pred[_label].values
+    label_array=df_label[_label].values
+    mpc_per_label=calc_pearsons(pred_array, label_array)
+    # label-wise performance
+    dct = {'log_name':'aed_dejan',
+            'model_id':'aed_dejan',
+            'label_dim': _label,
+            'mean_pearsons': mpc_per_label}
+    appended_result.append(pd.DataFrame([dct]))
     
-# cp results/prediction_muse/perception/lf/*.csv results/submission/c1_perception
+df_aed=pd.concat(appended_result)
+df_mpc=pd.concat([df_aed, df])
+df_mpc=df_mpc.sort_values(['label_dim', 'mean_pearsons'], ascending=False)
+df_mpc=df_mpc.reset_index(drop=True)
+print(df_mpc.shape)
 
+csv_path='./results/csvs/table2_pred_perception_with_aed.csv'
+write_to_csv(df_mpc, csv_path)
 
+# perception_pandora_fusion.py pseudo_fusion-gp-dejan
 
 

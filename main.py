@@ -28,6 +28,8 @@ def parse_args():
     parser.add_argument('--label_dim', default="assertiv", choices=config.PERCEPTION_LABELS)
     parser.add_argument('--normalize', action='store_true',
                         help='Specify whether to normalize features (default: False).')
+    parser.add_argument('--feature_length', type=int, default=None,
+                        help='Specify the number of seconds at the begining (positive) or end (negative) of the feature array i.e. 1 or -1 for 1 second.')
     parser.add_argument('--model_type', default='rnn',
                         help='Specify type of model to use, (default: RNN).')
     parser.add_argument('--model_dim', type=int, default=64,
@@ -120,13 +122,13 @@ def main(args):
         audio_feature = args.feature.split()[0] # 'w2v-msp' # 
         video_feature = args.feature.split()[1] # 'vit-fer' #
         text_feature = args.feature.split()[2] # 'bert-base-uncased' # 
-        data['audio'] = load_data(args.task, args.paths, audio_feature, args.label_dim, args.normalize, save=args.cache)
-        data['video'] = load_data(args.task, args.paths, video_feature, args.label_dim, args.normalize, save=args.cache)
-        data['text'] = load_data(args.task, args.paths, text_feature, args.label_dim, args.normalize, save=args.cache)
+        data['audio'] = load_data(args.task, args.paths, audio_feature, args.label_dim, args.normalize, feature_length=args.feature_length, save=args.cache)
+        data['video'] = load_data(args.task, args.paths, video_feature, args.label_dim, args.normalize, feature_length=args.feature_length, save=args.cache)
+        data['text'] = load_data(args.task, args.paths, text_feature, args.label_dim, args.normalize, feature_length=args.feature_length, save=args.cache)
         datasets = {partition:MultiModalMuSeDataset(data, partition) for partition in data['audio'].keys()}
         args.d_in = datasets['train'].get_feature_dim() # (d_in_a, d_in_v, d_in_t)
     else:
-        data = load_data(args.task, args.paths, args.feature, args.label_dim, args.normalize, save=args.cache)
+        data = load_data(args.task, args.paths, args.feature, args.label_dim, args.normalize, feature_length=args.feature_length, save=args.cache)
         datasets = {partition:MuSeDataset(data, partition) for partition in data.keys()}
         args.d_in = datasets['train'].get_feature_dim()
 
@@ -296,10 +298,18 @@ if __name__ == '__main__':
     model_id=datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M")
     if args.combine_train_dev:
         model_id+='-combine-train-dev'
-    feat_type='+'.join(args.feature.replace(os.path.sep, "-").split())
+    feat_id='+'.join(args.feature.replace(os.path.sep, "-").split())
+    if args.feature_length:
+        assert not args.feature_length == 0
+        if args.feature_length>0:
+            feat_id+=f'+first-{str(abs(args.feature_length))}-sec'
+        else:
+            feat_id+=f'+last-{str(abs(args.feature_length))}-sec'
+    #print(f'feat_id: {feat_id}')
+    #sys.exit(0)
     args.log_file_name =  '{}_{}_[{}]_[{}_{}]'.format(args.model_type.upper(), 
                                                             model_id, 
-                                                            feat_type,
+                                                            feat_id,
                                                             args.lr,
                                                             args.batch_size)
 

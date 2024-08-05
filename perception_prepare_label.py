@@ -5,6 +5,7 @@ import pathlib
 
 import config
 from data_parser import load_data
+from config_model_feat import label_dims
 
 # prepare df_label
 task='perception'
@@ -13,8 +14,7 @@ paths={'features': config.PATH_TO_FEATURES[task],
     'labels': config.PATH_TO_LABELS[task],
     'partition': os.path.join(config.PATH_TO_METADATA[task], f'partition.csv')
     }
-label_dims = ('aggressive', 'confident', 'good_natured',) 
-label_dims += ('arrogant', 'assertiv',  'dominant', 'independent', 'risk', 'leader_like', 'collaborative', 'enthusiastic', 'friendly', 'kind', 'likeable', 'sincere',  'warm') 
+
 appended_data = []
 for _label in label_dims[:]:
     paths.update({'data': os.path.join(config.DATA_FOLDER, task, _label)})

@@ -6,6 +6,14 @@ import random
 import pandas as pd
 import os
 
+def write_to_csv(df, csv_path, verbose=True):
+    csv_dir = pathlib.Path(csv_path).parent.resolve()
+    os.makedirs(csv_dir, exist_ok=True)
+
+    df.to_csv(csv_path)
+    if verbose:
+        print(f'Dataframe written to {csv_path}.')
+
 
 class Logger(object):
     def __init__(self, log_file="log_file.log"):

@@ -19,7 +19,7 @@ def train(model, train_loader, optimizer, loss_fn):
 
     for batch, batch_data in enumerate(train_loader, 1):
         features, feature_lens, labels, metas = batch_data
-
+        
         if type(features) is list:
             features = [_feat.to(device) for _feat in features]
             feature_lens = [_len.to(device) for _len in feature_lens]
