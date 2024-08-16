@@ -3,7 +3,6 @@ results
 
 __pycache__
 .idea
-*.sh
 *.out
 hp_search
 preds
