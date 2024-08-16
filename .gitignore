@@ -1,6 +1,8 @@
 logs
 results
 
+*code-workspace
+*DS_Store
 __pycache__
 .idea
 *.sh
