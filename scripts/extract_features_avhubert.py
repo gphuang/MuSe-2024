@@ -1,4 +1,6 @@
 # source: https://colab.research.google.com/drive/1bNXkfpHiVHzXQH8WjGhzQ-fsDxolpUjD#scrollTo=-D_fa6SGMpfA
+# install: https://github.com/facebookresearch/av_hubert
+# source activate av_hubert
 
 import sys
 import pathlib
@@ -17,6 +19,7 @@ import skvideo.io
 from tqdm import tqdm
 from base64 import b64encode
 
+sys.path.append('/scratch/work/huangg5/tutorials/av_hubert/avhubert')
 import utils as avhubert_utils
 from preparation.align_mouth import landmarks_interpolate, crop_patch, write_video_ffmpeg
 
@@ -101,7 +104,9 @@ def extract_visual_feature(video_path, ckpt_path, user_dir, is_finetune_ckpt=Fal
   return feature
 
 # demo
-if 1:
+if 0:
+  #! python scripts/extract_avhubert_features.py DUMMY
+  # https://github.com/facebookresearch/av_hubert/issues/36 
   model_name = 'base_lrs3_iter5'
   ckpt_path = f"/scratch/work/huangg5/tutorials/avhubert_pretrained_models/{model_name}.pt"
   # muse sample
@@ -112,7 +117,7 @@ if 1:
   origin_clip_path = "/scratch/work/huangg5/tutorials/data_example/clip.mp4"
   mouth_roi_path = "/scratch/work/huangg5/tutorials/data_example/roi.mp4"
   
-  if True: preprocess_video(origin_clip_path, mouth_roi_path, face_predictor_path, mean_face_path) # extract mouth roi
+  if False: preprocess_video(origin_clip_path, mouth_roi_path, face_predictor_path, mean_face_path) # extract mouth roi
   if False: pass # TODO extract face, lips, eyes, hands roi, avhubert is only on mouth?
   if True: feature = extract_visual_feature(mouth_roi_path, ckpt_path, user_dir) # extract video features
   if False: feature = extract_visual_feature(origin_clip_path, ckpt_path, user_dir) # extract video features
