@@ -198,9 +198,10 @@ def main(args):
                                                                      worker_init_fn=seed_worker,
                                                                      collate_fn=collate_fn)
             
-            #print(len(trainset), len(devset))
-            #print(next(iter(data_loader['train'])))
-            #sys.exit(0)
+            if 0:
+                print(len(trainset), len(devset))
+                print(next(iter(data_loader['train'])))
+                sys.exit(0)
             print('=' * 50)
             print(f'Training model... [seed {seed}] for at most {args.epochs} epochs')
             val_loss, val_score, best_model_file = train_model(args.task, 
@@ -235,9 +236,16 @@ def main(args):
         _test_score = f'{test_scores[best_idx]:7.4f}' 
 
         print('=' * 50)
+        import numpy as np
         print(f'Best {eval_str} on [Val] for seed {seeds[best_idx]}: '
-              f'[Val {eval_str}]: {_val_score}'
-              f' | [Test {eval_str}]: {_test_score}')
+              f'[Val {eval_str}]: {_val_score} '
+              f'| [Test {eval_str}]: {_test_score}')
+        print(f'Mean {eval_str}: '
+              f'[Val {eval_str}]: {np.mean(val_scores)} ' 
+              f'| [Test {eval_str}]: {np.mean(test_scores)}')
+        print(f'std {eval_str}: '
+              f'[Val {eval_str}]: {np.std(val_scores)} ' 
+              f'| [Test {eval_str}]: {np.std(test_scores)}')
         print('=' * 50)
 
         model_file = best_model_files[best_idx]  # best model of all of the seeds
@@ -293,8 +301,6 @@ if __name__ == '__main__':
     print("Start",flush=True)
     args = parse_args()
 
-    # debug
-    # print(f'args.feature: {args.feature}, id: {'_'.join(args.feature.replace(os.path.sep, "-").split())}')
     model_id=datetime.now(tz=tz.gettz()).strftime("%Y-%m-%d-%H-%M")
     if args.combine_train_dev:
         model_id+='-combine-train-dev'
@@ -305,8 +311,11 @@ if __name__ == '__main__':
             feat_id+=f'+first-{str(abs(args.feature_length))}-sec'
         else:
             feat_id+=f'+last-{str(abs(args.feature_length))}-sec'
-    #print(f'feat_id: {feat_id}')
-    #sys.exit(0)
+    # debug
+    if 0:
+        print(f'args.feature: {args.feature}, id: {'_'.join(args.feature.replace(os.path.sep, "-").split())}')
+        print(f'feat_id: {feat_id}')
+        sys.exit(0)
     args.log_file_name =  '{}_{}_[{}]_[{}_{}]'.format(args.model_type.upper(), 
                                                             model_id, 
                                                             feat_id,

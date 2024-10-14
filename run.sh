@@ -216,15 +216,18 @@ python3 main.py --task perception --epochs 1 --feature_length -2 --feature 'ds' 
 # 1631546 1623254 impression +/-10 sec
 # mv 'lf' to 'submission' folder
 
-### TBD post muse2024
-# plot activation from bert to avhubert.
-# TBD table2 table3 differs when summarizing p from dev logs vs. calculate p from preds
-# TBD average preds over 5 preds
+### post muse2024
+# TBD first/last impression
+# TBD AV, A, V contributions
+# TBD average preds over 5 preds: report mean/std on dev & test, still use best seed for prediction, akin to late fusion with avg. of 5 seeds?
 # TBD mse + p error rate
 # TBD multi-label loss
 # TBD multi-label system vs. single-label, loss function, calculate p 
 # TBD audio + video fusion
 # TBD multi-label vs. uni-label n=16: 1-hot, ordinal, 3-d
 # TBD e2e with raw wav/mp4 v_feature with EfficientFace?
+# TBD plot activation from bert to avhubert.
+# TBD table2 table3 differs when summarizing p from dev logs vs. calculate p from preds
+
 
 

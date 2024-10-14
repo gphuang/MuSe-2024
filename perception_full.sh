@@ -11,8 +11,8 @@ module load mamba
 
 source activate muse
 
-model_types=('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') #('crnn-attn')  #('rnn') #
-labels=('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured') #('aggressive') # 
+model_types=('rnn') #('rnn' 'cnn' 'crnn' 'cnn-attn' 'crnn-attn') #('crnn-attn')  #
+labels=('aggressive') #('aggressive' 'arrogant' 'dominant' 'enthusiastic' 'friendly' 'leader_like' 'likeable' 'assertiv' 'confident' 'independent' 'risk' 'sincere' 'collaborative' 'kind' 'warm' 'good_natured') # 
 features=('vit-fer') #('ds') #('faus' 'facenet512' 'vit-fer' 'w2v-msp' 'egemaps' 'ds') #
 audio_features=('w2v-msp' 'egemaps' 'ds' 'hubert-superb')  
 video_features=('faus' 'facenet512' 'vit-fer')  
@@ -27,7 +27,7 @@ model_dims=(512)
 # GENERAL
 lrs=(0.0005)
 patience=10
-n_seeds=5
+n_seeds=3 # 5
 dropouts=(0.4)
 batch_size=32
 
