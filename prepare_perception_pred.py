@@ -16,7 +16,7 @@ label_dims_sorted=['aggressive', 'arrogant', 'dominant', 'enthusiastic', 'friend
  'risk', 'sincere', 'collaborative', 'kind', 'warm', 'good_natured']
 
 # devel uni- and multi-modal systems
-fname='./results/csvs/table2_pred_perception.csv' # script/summarize_pred_mpc.py
+fname='/scratch/work/huangg5/muse/MuSe-2024/results/csvs/table2_pred_perception.csv' # script/summarize_pred_mpc.py
 df=pd.read_csv(fname)
 
 top_models=unimodals+multimodals

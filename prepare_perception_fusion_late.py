@@ -6,21 +6,22 @@ from utils import write_to_csv
 from config import PREDICTION_FOLDER
 from config_model_feat import unimodals, multimodals, label_dims
 
-fname='./results/csvs/table2_pred_perception.csv' # script/summarize_pred_mpc.py
+# python script/summarize_pred_mpc.py
+fname='./results/csvs/table2_pred_perception.csv' 
 df=pd.read_csv(fname)
 
 prepare_sbatch_script=0
-_impression='full'# '5-sec' # 'None' # 
+_impression='None' # 'all' # '5-sec' # 
 if _impression:
     if _impression.endswith('-sec'):
         top_models=[i for i in unimodals+multimodals if _impression in i]
         lf_dir='lf-impressions-' + _impression #'lf-impressions' #  default 'lf'
-    elif _impression=='full':
-        top_models=[i for i in unimodals+multimodals if not '-sec' in i]
-        lf_dir='lf'
+    else:
+        top_models=unimodals+multimodals
+        lf_dir='lf+impressions'
 else:
-    top_models=unimodals+multimodals
-    lf_dir='lf+impressions'
+    top_models=[i for i in unimodals+multimodals if not '-sec' in i]
+    lf_dir='lf'
 
 if prepare_sbatch_script:
     cmds=[]
@@ -61,7 +62,7 @@ csv='perception_late_fusion.csv'
 
     sys.exit(0)
 
-# sbatch run-late-fusion-perception.sh
+# sbatch run-perception-late-fusion.sh
 
 # combine lf labels into 1 csv submission file
 for partition in ['devel', 'test']:
@@ -80,4 +81,4 @@ for partition in ['devel', 'test']:
     csv_path=os.path.join(PREDICTION_FOLDER, 'perception', lf_dir, f'predictions_{partition}.csv')
     write_to_csv(df_out, csv_path)
     
-# cp results/prediction_muse/perception/lf/*.csv results/submission/c1_perception
+# cp results/prediction_muse/perception/lf/*.csv results/final_submission/c1_perception

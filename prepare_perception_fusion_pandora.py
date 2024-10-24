@@ -6,7 +6,8 @@ from config import PREDICTION_FOLDER
 from config_model_feat import unimodals, multimodals, label_dims
 from utils import write_to_csv
 
-fname='./results/csvs/table2_pred_perception.csv' # script/summarize_pred_mpc.py
+# python script/summarize_pred_mpc.py
+fname='./results/csvs/table2_pred_perception.csv' 
 # fname='./results/csvs/table2_pred_perception_with_aed.csv' # 
 df=pd.read_csv(fname)
 df=df.sort_values(['label_dim', 'mean_pearsons'], ascending=False)

@@ -217,8 +217,9 @@ python3 main.py --task perception --epochs 1 --feature_length -2 --feature 'ds' 
 # mv 'lf' to 'submission' folder
 
 ### post muse2024
-# TBD first/last impression
-# TBD AV, A, V contributions
+# Done 3740147 first/last impression +/-10 sec
+# 16~21 labels, uni-/multi-modal, impressions
+# analysis AV, A, V, T contributions, uni- vs. multi-modal, random vs. first vs. last impressions
 # TBD average preds over 5 preds: report mean/std on dev & test, still use best seed for prediction, akin to late fusion with avg. of 5 seeds?
 # TBD mse + p error rate
 # TBD multi-label loss

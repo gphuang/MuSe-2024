@@ -1,28 +1,40 @@
-label_dims = ('aggressive', 'confident', 'good_natured', 'arrogant', 'assertiv',  'dominant', 'independent', 'risk', 'leader_like', 'collaborative', 'enthusiastic', 'friendly', 'kind', 'likeable', 'sincere',  'warm') 
+# 35 perception labels 
+from config import PERCEPTION_LABELS
+# 16 labels on aggentive and communal scale
+label_dims=['aggressive', 'arrogant', 'dominant', 'enthusiastic', 'friendly', 
+            'leader_like', 'likeable', 'assertiv', 'confident', 'independent', 
+            'risk', 'sincere', 'collaborative', 'kind', 'warm', 'good_natured']
+# 21 annotated labels 
+label_dims+=['attractive', 'charismatic', 'competitive', 'expressive', 'naive']
 
-# models rep of uni and multi-modal, for pseudo-fusion, as late_fusion.py not working for c1
+# impression position and length
+_positions=[ 'random', 'first', 'last']
+_max_len=6 #11 # impression_length
+_feat_lens=['-'.join([_position, str(i), 'sec']) for _position in _positions for i in range(1, _max_len) ] 
+
+# feat-model reps of uni-modal
 _model_types=['CNN', 'CRNN', 'RNN', 'CNN-ATTN', 'CRNN-ATTN']
-_features=['vit-fer', 'w2v-msp', 'hubert-superb', 'bert-multilingual'] # 'bert-multilingual' for Humor
-_positions=['first', 'last']
-_max_len=11 #6 #
-_feat_lens=['-'.join([_position, str(i), 'sec']) for _position in _positions for i in range(1, _max_len) ] # [0, 1, 2, 3, 4, 5, 10]
-_feat_types=['+'.join([_feat, _len]) for _feat in _features for _len in _feat_lens]
+_features=['vit-fer', 'w2v-msp', 'hubert-superb'] # 'bert-multilingual' for Humor
+_features+=['avhubert-base-lrs3-iter5']
+_features+=['bert-base-uncased', 'bert-base-cased', 'bert-base-multilingual-uncased', 'bert-base-multilingual-cased', 'roberta-base', 'xlm-roberta-large', 'gpt2'] #
+_features+=['faus', 'facenet512', 'egemaps', 'ds'] 
+_impressions=['+'.join([_feat, _len]) for _feat in _features for _len in _feat_lens]
 _hyper='0.0005_32'
 unimodals=[_model+'_['+_feat+']_['+_hyper+']' for _model in _model_types for _feat in _features]
-unimodals+=[_model+'_['+_feat+']_['+_hyper+']' for _model in _model_types for _feat in _feat_types]
-#print(len(unimodals)) # 15
+unimodals+=[_model+'_['+_feat+']_['+_hyper+']' for _model in _model_types for _feat in _impressions]
+#print(len(unimodals)) 
 
-_model_types=['IAF'] #'LMF'
-_a_types=['w2v-msp', 'hubert-superb']
-_v_types=['vit-fer', ]
-_t_types=['bert-base-uncased', 'bert-base-multilingual-cased', 'bert-multilingual', 'roberta-base', 'xlm-roberta-large', 'gpt2'] # bert-multilingual is for Humor 
-_c_types=['_', '+']
-_features=[_c.join([_a, _v, _t,]) for _a in _a_types for _v in _v_types for _t in _t_types for _c in _c_types]
-_feat_types=['+'.join([_feat, _len]) for _feat in _features for _len in _feat_lens]
+# feat-model reps of multi-modal
+_model_types=['IAF', 'LMF', 'TFN'] #'LMF'
+_a_types=[ 'egemaps', 'ds', 'w2v-msp', 'hubert-superb', 'avhubert-base-lrs3-iter5']
+_v_types=['vit-fer', 'faus', 'facenet512']
+_t_types=['bert-base-uncased', 'bert-base-cased', 'bert-base-multilingual-cased', 'bert-base-multilingual-uncased', 'roberta-base', 'xlm-roberta-large', 'gpt2'] # bert-multilingual is for Humor 
+_features=['+'.join([_a, _v, _t,]) for _a in _a_types for _v in _v_types for _t in _t_types]
+_impressions=['+'.join([_feat, _len]) for _feat in _features for _len in _feat_lens]
 _hyper='0.0005_32'
 multimodals=[_model+'_['+_feat+']_['+_hyper+']' for _model in _model_types for _feat in _features]
-multimodals+=[_model+'_['+_feat+']_['+_hyper+']' for _model in _model_types for _feat in _feat_types]
-#print(len(multimodals)) # 10
+multimodals+=[_model+'_['+_feat+']_['+_hyper+']' for _model in _model_types for _feat in _impressions]
+#print(len(multimodals)) 
 
 dct_fusion_models={
 #fname='./results/prediction_muse/perception/top_1/predictions_devel.csv', # 0.5326608133674763 # same with with vit-vit-vit

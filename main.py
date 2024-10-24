@@ -29,7 +29,11 @@ def parse_args():
     parser.add_argument('--normalize', action='store_true',
                         help='Specify whether to normalize features (default: False).')
     parser.add_argument('--feature_length', type=int, default=None,
+                        help='(Deprecated) Specify the number of seconds at the begining (positive) or end (negative) of the feature array i.e. 1 or -1 for 1 second.')
+    parser.add_argument('--impression_length', type=int, default=None,
                         help='Specify the number of seconds at the begining (positive) or end (negative) of the feature array i.e. 1 or -1 for 1 second.')
+    parser.add_argument('--impression_position', type=str, default='random', choices=['first', 'last', 'random'],
+                        help='Specify the position of the impression interval.')
     parser.add_argument('--model_type', default='rnn',
                         help='Specify type of model to use, (default: RNN).')
     parser.add_argument('--model_dim', type=int, default=64,
@@ -116,19 +120,20 @@ def main(args):
     #data input 
     collate_fn=custom_collate_fn
     if args.model_type.lower() in ['lmf', 'tfn', 'iaf', 'ltf', 'laf']:
-        print('prepare multi-modal data input ')
+        print('Prepare multi-modal data input ')
         data={}
         print('args.feature', args.feature)
         audio_feature = args.feature.split()[0] # 'w2v-msp' # 
         video_feature = args.feature.split()[1] # 'vit-fer' #
         text_feature = args.feature.split()[2] # 'bert-base-uncased' # 
-        data['audio'] = load_data(args.task, args.paths, audio_feature, args.label_dim, args.normalize, feature_length=args.feature_length, save=args.cache)
-        data['video'] = load_data(args.task, args.paths, video_feature, args.label_dim, args.normalize, feature_length=args.feature_length, save=args.cache)
-        data['text'] = load_data(args.task, args.paths, text_feature, args.label_dim, args.normalize, feature_length=args.feature_length, save=args.cache)
+        data['audio'] = load_data(args.task, args.paths, audio_feature, args.label_dim, args.normalize, impression_length=args.impression_length, impression_position=args.impression_position, save=args.cache)
+        data['video'] = load_data(args.task, args.paths, video_feature, args.label_dim, args.normalize, impression_length=args.impression_length, impression_position=args.impression_position, save=args.cache)
+        data['text'] = load_data(args.task, args.paths, text_feature, args.label_dim, args.normalize, impression_length=args.impression_length, impression_position=args.impression_position, save=args.cache)
         datasets = {partition:MultiModalMuSeDataset(data, partition) for partition in data['audio'].keys()}
         args.d_in = datasets['train'].get_feature_dim() # (d_in_a, d_in_v, d_in_t)
     else:
-        data = load_data(args.task, args.paths, args.feature, args.label_dim, args.normalize, feature_length=args.feature_length, save=args.cache)
+        print('Prepare uni-modal data input.')
+        data = load_data(args.task, args.paths, args.feature, args.label_dim, args.normalize, impression_length=args.impression_length, impression_position=args.impression_position, save=args.cache)
         datasets = {partition:MuSeDataset(data, partition) for partition in data.keys()}
         args.d_in = datasets['train'].get_feature_dim()
 
@@ -305,12 +310,9 @@ if __name__ == '__main__':
     if args.combine_train_dev:
         model_id+='-combine-train-dev'
     feat_id='+'.join(args.feature.replace(os.path.sep, "-").split())
-    if args.feature_length:
-        assert not args.feature_length == 0
-        if args.feature_length>0:
-            feat_id+=f'+first-{str(abs(args.feature_length))}-sec'
-        else:
-            feat_id+=f'+last-{str(abs(args.feature_length))}-sec'
+    if args.impression_length:
+        assert args.impression_length > 0
+        feat_id+=f'+{args.impression_position}-{str(abs(args.impression_length))}-sec'
     # debug
     if 0:
         print(f'args.feature: {args.feature}, id: {'_'.join(args.feature.replace(os.path.sep, "-").split())}')
@@ -321,12 +323,11 @@ if __name__ == '__main__':
                                                             feat_id,
                                                             args.lr,
                                                             args.batch_size)
-
-    # adjust your paths in config.py
     task_id = args.task if args.task != PERCEPTION else os.path.join(args.task, args.label_dim)
     args.paths = {'log': os.path.join(config.LOG_FOLDER, task_id) if not args.predict else os.path.join(config.LOG_FOLDER, task_id, 'prediction'),
                   'data': os.path.join(config.DATA_FOLDER, task_id),
                   'model': os.path.join(config.MODEL_FOLDER, task_id, args.log_file_name if not args.eval_model else args.eval_model)}
+    
     if args.predict:
         if args.eval_model:
             args.paths['predict'] = os.path.join(config.PREDICTION_FOLDER, task_id, args.eval_model, args.eval_seed)

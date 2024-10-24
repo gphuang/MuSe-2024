@@ -8,13 +8,11 @@ from tqdm import tqdm
 sys.path.append("/scratch/work/huangg5/muse/MuSe-2024")
 from eval import calc_pearsons, mean_pearsons
 from utils import write_to_csv
-from config_model_feat import label_dims, unimodals, multimodals
+from config_model_feat import label_dims
 
 dir_results='/scratch/work/huangg5/muse/MuSe-2024/results/prediction_muse/'
 task='perception'
 metric = 'best_val_Pearson'
-top_models=unimodals+multimodals
-print(len(top_models)) #25
 
 # devel meta ids
 from data_parser import get_data_partition
@@ -27,36 +25,36 @@ subset='*_*_*' #'RNN*ds*0.0005*' #'*' #  mpc: 0.143677 # except: fusion folder '
 prediction_dir=os.path.join(dir_results, task)
 appended_data = []
 for _label in label_dims:
-    onlyfiles=glob.glob(f'{prediction_dir}/{_label}/{subset}/*devel.csv',  recursive = True)
+    onlyfiles=glob.glob(f'{prediction_dir}/{_label}/{subset}/*devel.csv',  recursive=True)
     onlyfiles=[f for f in onlyfiles if os.path.isfile(f) ]
     for _file in onlyfiles:
         try:
             _logname=pathlib.Path(_file).parts[-2]
             _model_type=_logname.split('_')[0]
             _date_id=_logname.split('_')[1]
-            _feat_types=_logname.split('_')[2:-2] # multimodal uses multiple features
+            _feat_type=_logname.split('_')[2:-2] # multimodal uses multiple features
             _hyper_params=_logname.split('_')[-2:]
             # read predictions
-            model_id='_'.join([_model_type] + _feat_types + _hyper_params) # create new model id
+            model_id='_'.join([_model_type] + _feat_type + _hyper_params) # create new model id
             if _date_id.endswith('combine-train-dev'): # predictions for submission
                 model_id += '_combine-train-dev' # create new model id
             df=pd.read_csv(_file)
             df['label_dim']=_label
             df['model_id']=model_id
-            #df['feat_id']=_feat_types
             df['log_name']=_logname
             appended_data.append(df)
-        except:
-            print(f'Problem with {_file}.')
-# deal with duplicates, keep latest
+        except Exception as error:
+            print(f'Problem with {_file}. {error}')
+            sys.exit(0)
+# drop duplicates, keep latest
 df = pd.concat(appended_data)
 df = df.drop_duplicates(subset=['meta_col_0', 'model_id', 'label_dim'], keep='last')
 #print(df.shape, df.columns, df.model_id.unique())
 
 # sanity check
-uniq_models=df.model_id.unique() # top_models # 
+uniq_models=df.model_id.unique() 
 num_classes=len(label_dims)
-#print(len(uniq_models), uniq_models)
+print(f'Number of uniq model_ids: {len(uniq_models)}')
    
 ### Table 2. label-wise p
 appended_result=[]
@@ -75,7 +73,6 @@ for _model in uniq_models:
             pred_array=_df.prediction
             label_array=_df.label
             mpc_per_label=calc_pearsons(pred_array.to_numpy(), label_array.to_numpy())
-    
             # label-wise performance
             dct = {'log_name': log_name,
                    'model_id':_model,
@@ -92,7 +89,8 @@ if 1 & len(missing_ids)>0:
     
 # write output
 if 1:
-    csv_path='results/csvs/table2_pred_perception.csv'
+    print('Save label-wise mpc to csv.')
+    csv_path='/scratch/work/huangg5/muse/MuSe-2024/results/csvs/table2_pred_perception.csv'
     write_to_csv(df_mpc, csv_path)
     
 ### Table 3. overall p
@@ -139,12 +137,13 @@ if 1 & len(missing_ids)>0:
     
 # write output
 if 1:
-    csv_path='results/csvs/table3_pred_perception.csv'
+    print('Save overall mpc to csv.')
+    csv_path='/scratch/work/huangg5/muse/MuSe-2024/results/csvs/table3_pred_perception.csv'
     write_to_csv(df_mpc, csv_path)
 
 sys.exit(0)
 
-### Table 3. Overall mpc across 16 labels. (verify with Nhan's calculation)
+### Table 3. Overall mpc across 16 labels. (verified with Nhan's calculation)
 uniq_labels=df['label_dim'].unique()
 num_classes = len(uniq_labels)
 appended_result=[]

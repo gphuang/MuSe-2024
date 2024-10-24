@@ -6,7 +6,6 @@ from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 from torch.nn.init import xavier_normal_
 
-
 class MFN(nn.Module):
     '''
     Amir Zadeh, Paul Pu Liang, Navonil Mazumder, et al., “Memory fusion network for multi-view sequential learning,” in AAAI, 2018, pp. 5634–5641.
@@ -119,7 +118,6 @@ class MFN(nn.Module):
         hs = torch.cat([h_l, h_a, h_v, mem], dim=-1)
         return hs
 
-
 class TFN(nn.Module):
     '''
     Amir Zadeh, Minghai Chen, Soujanya Poria, et al., “Tensor fusion network for multimodal sentiment analysis,” in EMNLP, 2017, pp. 1103–1114.
@@ -209,7 +207,6 @@ class TFN(nn.Module):
         # output = post_fusion_y_3 * self.output_range + self.output_shift
 
         return output
-
 
 class LMF(nn.Module):
 

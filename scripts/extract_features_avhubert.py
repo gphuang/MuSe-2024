@@ -118,8 +118,8 @@ if 0:
   mouth_roi_path = "/scratch/work/huangg5/tutorials/data_example/roi.mp4"
   
   if False: preprocess_video(origin_clip_path, mouth_roi_path, face_predictor_path, mean_face_path) # extract mouth roi
-  if False: pass # TODO extract face, lips, eyes, hands roi, avhubert is only on mouth?
-  if True: feature = extract_visual_feature(mouth_roi_path, ckpt_path, user_dir) # extract video features
+  if False: pass # TODO extract face, lips, eyes, hands roi, avhubert is limited only on mouth_roi
+  if True: feature = extract_visual_feature(mouth_roi_path, ckpt_path, user_dir) # extract video features from mouth_roi
   if False: feature = extract_visual_feature(origin_clip_path, ckpt_path, user_dir) # extract video features
   
   out_fname = "/scratch/work/huangg5/tutorials/data_example/avhubert-feat.csv"

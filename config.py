@@ -47,7 +47,7 @@ PATH_TO_METADATA = {
 
 PARTITION_FILES = {task: os.path.join(path_to_meta, 'partition.csv') for task,path_to_meta in PATH_TO_METADATA.items()}
 
-PERCEPTION_LABELS = ['assertiv','competent','dominant','confident','independent','enthusiastic','good_natured','sincere','collaborative','friendly','forceful','aggressive','expressive','likeable','trustworthy','intelligent','arrogant','emotional','yielding','naive','competitive','leader_like','productive','sympathetic','kind','charismatic','compassionate','warm','understanding','risk','attractive','envious','pity','angry','admiring']
+PERCEPTION_LABELS = ['admiring', 'aggressive', 'angry', 'arrogant', 'assertiv', 'attractive', 'charismatic', 'collaborative', 'compassionate', 'competent', 'competitive', 'confident', 'dominant', 'emotional', 'enthusiastic', 'envious', 'expressive', 'forceful', 'friendly', 'good_natured', 'independent', 'intelligent', 'kind', 'leader_like', 'likeable', 'naive', 'pity', 'productive', 'risk', 'sincere', 'sympathetic', 'trustworthy', 'understanding', 'warm', 'yielding']
 
 current_timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:23]
 OUTPUT_PATH = os.path.join(BASE_PATH, 'results')

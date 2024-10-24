@@ -76,13 +76,14 @@ def fit_normalizer(task:str, feature:str, feature_idx=2) -> StandardScaler:
 
 # --------------------------------------  humor ---------------------------------------------------------------#
 
-def load_humor_subject(feature, subject_id, normalizer, time_idx=None) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
+def load_humor_subject(feature, subject_id, normalizer, impression=None) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
     """
     Loads data for a single subject for the humor task
     :param feature: feature name
     :param subject_id: subject name
     :param normalizer: fitted StandardScaler, can be None if no normalization is desired
     :param time_idx: time idx of feature array, by default None. If used, then only part of the feature array is returned.
+    :param impression: tuple of (impression_length:int, impression_position:str)
     :return: features, labels, metas.
         features is a list of ndarrays of shape (seg_len, feature_dim)
         labels is a ndarray of shape (len(features), 1) (label for each element in the features list)
@@ -114,12 +115,19 @@ def load_humor_subject(feature, subject_id, normalizer, time_idx=None) -> Tuple[
         segment_id = y['segment_id']
         segment_features = feature_df[feature_df.segment_id == segment_id]
         _df = segment_features[(segment_features.timestamp >= start) & (segment_features.timestamp < end)]
-        if time_idx:
-            assert not time_idx==0 
-            if time_idx>0:
-                label_features = _df.iloc[:time_idx, feature_idx:].values
+        if impression:
+            (_len, _pos) = impression
+            assert not _len==0 
+            if _pos=='first':
+                label_features = _df.iloc[:_len*2, feature_idx:].values
+            elif _pos=='last':
+                label_features = _df.iloc[-_len*2:, feature_idx:].values
+            elif _pos=='random':
+                _df0 = _df.sample(n=abs(_len*2))
+                label_features = _df0.iloc[:, feature_idx:].values
+                # 'baum' has (0, *) _df 
             else:
-                label_features = _df.iloc[time_idx:, feature_idx:].values
+                print('Unknow option for impression position.')
         else:
             label_features = _df.iloc[:, feature_idx:].values
             
@@ -139,7 +147,7 @@ def load_humor_subject(feature, subject_id, normalizer, time_idx=None) -> Tuple[
 # --------------------------------------  perception ---------------------------------------------------------------#
 
 
-def load_perception_subject(feature, subject_id, normalizer, label_dim, time_idx=None) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
+def load_perception_subject(feature, subject_id, normalizer, label_dim, impression_length=None, impression_position=None) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
     """
     Loads data for a single subject for the perception task
     :param feature: feature name
@@ -148,6 +156,8 @@ def load_perception_subject(feature, subject_id, normalizer, label_dim, time_idx
     method, so no need to take care of that. It just needs to be called in the load_mimic_subject method somewhere
     to normalize the features
     :param time_idx: time idx of feature array, by default None. If used, then only part of the feature array is returned.
+    :param impression_length:int 
+    :param impression_position:str
     :return: features, labels, metas.
         Assuming every subject consists of n segments of lengths l_1,...,l_n:
             features is a list (length n) of ndarrays of shape (l_i, feature_dim)  - each item corresponding to a segment
@@ -174,14 +184,29 @@ def load_perception_subject(feature, subject_id, normalizer, label_dim, time_idx
         feature_df.dropna(inplace=True)
 
     feature_idx = 2
+    if impression_length and impression_position:
+        assert not impression_length==0 
+        if impression_position=='first':
+            features = feature_df.iloc[:impression_length*2, feature_idx:].values
+        elif impression_position=='last':
+            features = feature_df.iloc[-impression_length*2:, feature_idx:].values
+        elif impression_position=='random':
+            _df0 = feature_df.sample(n=abs(impression_length*2))
+            features = _df0.iloc[:, feature_idx:].values
+        else:
+            print('Unknow option for impression position.')
+    else:
+        features = feature_df.iloc[:, feature_idx:].values
+
+    """
     if time_idx:
         assert not time_idx==0 
         if time_idx>0:
             features = feature_df.iloc[:time_idx, feature_idx:].values
         else:
             features = feature_df.iloc[time_idx:, feature_idx:].values
-    else:
-        features = feature_df.iloc[:, feature_idx:].values
+    """
+
     if not (normalizer is None):
         features = normalizer.transform(features)
     features = [features]
@@ -201,6 +226,8 @@ def load_data(task:str,
               save=False,
               ids: Optional[Dict[str, List[str]]]=None,
               feature_length: Optional[int]=None,
+              impression_length: Optional[int]=None,
+              impression_position: Optional[str]=None,
               data_file_suffix: Optional[str]=None) \
         -> Dict[str, Dict[str, List[np.ndarray]]]:
     """
@@ -214,7 +241,9 @@ def load_data(task:str,
     :param segment_train: whether to do segmentation on the training data
     :param ids: only consider these IDs (map 'train', 'devel', 'test' to list of ids) - only relevant for personalisation
     :param data_file_suffix: optional suffix for data file, may be useful for personalisation
-    :param feature_length: optional parameter to load first or last few seconds of data. (hop_len is 500ms)
+    :param feature_length: (deprecated) optional parameter to load first or last few seconds of data. (hop_len is 500ms)
+    :param impression_length: optional parameter to load first or last few seconds of data. (hop_len is 500ms)
+    :param impression_position: optional parameter to load first or last impressions.
     :return: dict with keys 'train', 'devel' and 'test', each in turn a dict with keys:
         feature: list of ndarrays shaped (seq_length, features)
         labels: corresponding list of ndarrays shaped (seq_length, 1) for n-to-n tasks like stress, (1,) for n-to-1
@@ -245,10 +274,18 @@ def load_data(task:str,
     else:
         normalizer = None
     
-    if not (feature_length is None):
-        time_idx=feature_length*2
+    """ 
+    if not (impression_length is None):
+        _len=int(impression_length*2) # hop length is 500ms
+        if impression_position=='first':
+            time_idx=slice(_len)
+        elif impression_position=='last':
+            time_idx=slice(-_len,None)
+        else:
+            time_idx*=1
     else:
         time_idx=None
+    """
 
     for partition, subject_ids in partition2subject.items():
         if ids:
@@ -260,13 +297,16 @@ def load_data(task:str,
                 features, labels, metas = load_humor_subject(feature=feature, 
                                                              subject_id=subject_id,
                                                              normalizer=normalizer,
-                                                             time_idx=time_idx)
+                                                             impression=(impression_length, impression_position),
+                                                             )
             elif task == PERCEPTION:
                 features, labels, metas = load_perception_subject(feature=feature, 
                                                                   subject_id=subject_id,
                                                                   normalizer=normalizer,
                                                                   label_dim=label_dim,
-                                                                  time_idx=time_idx) # (hop_len is 500ms)
+                                                                  impression_length=impression_length, 
+                                                                  impression_position=impression_position,
+                                                                  )
 
             data[partition]['feature'].extend(features)
             data[partition]['label'].extend(labels)

@@ -27,9 +27,9 @@ _full_sets = unimodal_sets + multimodal_sets
 assert len(_full_sets) == len(unimodal_sets) + len(multimodal_sets)
 
 task='perception' 
-csv_ins=(f'results/csvs/{task}.csv',)
-csv_ins+=(f'results/csvs/{task}_fusion.csv',)
-csv_path=f'results/csvs/{task}_analysis.csv'
+csv_ins=(f'/scratch/work/huangg5/muse/MuSe-2024/results/csvs/{task}.csv',)
+csv_ins+=(f'/scratch/work/huangg5/muse/MuSe-2024/results/csvs/{task}_fusion.csv',)
+csv_path=f'/scratch/work/huangg5/muse/MuSe-2024/results/csvs/{task}_analysis.csv'
 metric = 'best_val_Pearson'
 
 # verify baseline table2 & table3 numbers
@@ -109,9 +109,8 @@ if 1:
     df6 = df5.groupby(['model_type', 'feature']).agg({'mean_p': ['max', 'mean', 'std']})
     #print(df5)
 
-df1.to_csv(f'results/csvs/table2_{task}.csv')
-df6.to_csv(f'results/csvs/table3_{task}.csv')
-
+df1.to_csv(f'results/csvs/table2_devel_{task}.csv')
+df6.to_csv(f'results/csvs/table3_devel_{task}.csv')
 
 if 0:
     # png

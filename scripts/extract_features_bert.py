@@ -4,9 +4,9 @@ from pathlib import Path
 import pandas as pd 
 from transformers import pipeline
 
-# muse-2024
-text_data = '/scratch/elec/puhe/c/muse_2024/c1_muse_perception/raw/transcriptions'
-feat_dir = "/scratch/elec/puhe/c/muse_2024/c1_muse_perception/feature_segments"
+# Define the BERT model checkpoint
+checkpoints = ['bert-base-cased', 'bert-base-multilingual-uncased']
+# ['bert-base-uncased', 'bert-base-multilingual-cased', 'roberta-base', 'xlm-roberta-large', 'gpt2']
 
 # muse-2023 bert-4
 if 0:
@@ -14,10 +14,9 @@ if 0:
     df = pd.read_csv(f_name) # (seq_len, 770)
     print(df.shape)
 
-# Define the BERT model checkpoint
-checkpoints = ['bert-base-uncased', 'bert-base-multilingual-cased', 'roberta-base', 'xlm-roberta-large', 'gpt2']
-
-# Extract features iteration
+# muse-2024
+text_data = '/scratch/elec/puhe/c/muse_2024/c1_muse_perception/raw/transcriptions'
+feat_dir = "/scratch/elec/puhe/c/muse_2024/c1_muse_perception/feature_segments"
 onlyfiles = [f for f in os.listdir(text_data) if os.path.isfile(os.path.join(text_data, f)) and not f.startswith('.')]
 print(f'Number of speakers: {len(onlyfiles)}')
 assert len(onlyfiles)==177
